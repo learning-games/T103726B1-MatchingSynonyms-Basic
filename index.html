@@ -1009,6 +1009,15 @@ const DECOR_IMAGES = [
   "image/choice8.png",
 ];
 
+// ===== Decor Image Memory Cache =====
+const DECOR_CACHE = {};
+
+DECOR_IMAGES.forEach(src=>{
+  const img = new Image();
+  img.src = src;
+  DECOR_CACHE[src] = img;
+});
+
 function spawnDecorImages(){
   const options = document.querySelectorAll('.option.circle');
   if(options.length !== 4) return;
@@ -1028,7 +1037,7 @@ const RIGHT_OFFSET_Y = -120;   // ยกขวาขึ้น/ลง
     const rect = opt.getBoundingClientRect();
 
     const img = document.createElement('img');
-    img.src = imgs[i];
+    img.src = DECOR_CACHE[imgs[i]].src;
     img.className = 'choice-decor-img';
 
     // ===== แยกกลุ่มซ้าย / ขวา =====
@@ -1618,17 +1627,33 @@ async function preloadInBatches(urls, batchSize = 16, onProgress = ()=>{}){
 
 /* รวมลิสต์รูปทั้งหมดที่เกมต้องใช้ */
 function collectAllGameImages(){
+
   const uniq = new Set();
+
   Object.values(FIXED_IMG_MAP).forEach(p => uniq.add(p));
+
   [
-    "image/background2.png", "image/banner2.png", "image/welcome.png",
+    "image/background2.png",
+    "image/banner2.png",
+    "image/welcome.png",
     "image/guide.png",
   ].forEach(p => uniq.add(p));
+
+  // ===== เพิ่ม preload รูปตกแต่ง choice1-8 =====
+  if (typeof DECOR_IMAGES !== "undefined") {
+    DECOR_IMAGES.forEach(p => uniq.add(p));
+  }
+
   if (typeof LEVEL1_BANK !== 'undefined' && Array.isArray(LEVEL1_BANK)) {
-  LEVEL1_BANK.forEach(q => q?.img && uniq.add(q.img));
-}
-  if (Array.isArray(NEEDS_BANK))  NEEDS_BANK.forEach(q  => q?.img && uniq.add(q.img));
-  if (Array.isArray(LEVEL3_BANK)) LEVEL3_BANK.forEach(q => q?.img && uniq.add(q.img));
+    LEVEL1_BANK.forEach(q => q?.img && uniq.add(q.img));
+  }
+
+  if (Array.isArray(NEEDS_BANK))
+    NEEDS_BANK.forEach(q => q?.img && uniq.add(q.img));
+
+  if (Array.isArray(LEVEL3_BANK))
+    LEVEL3_BANK.forEach(q => q?.img && uniq.add(q.img));
+
   return [...uniq].map(p => new URL(p, location.href).href);
 }
 
