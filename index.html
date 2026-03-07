@@ -1,0 +1,2474 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เกม-จับคู่ รู้คำพ้อง ป.3-4</title>
+<style>
+
+/* ===== ฟอนต์รวมหน้า ===== */
+@font-face{
+  font-family: 'MyGameFont';
+  src: url('image/THSarabunNew.ttf') format('truetype');
+       font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face{
+  font-family: 'MyGameFont';
+  src: url('image/THSarabunNewBold.ttf') format('truetype');
+       font-weight: 700; font-style: normal; font-display: swap;
+}
+html, body, button, input, select, textarea, .pill, .btn, .btn-mini,
+.levelBtn, #startTitle, #countdown, .label, #timer {
+  font-family: 'MyGameFont', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+}
+
+:root{
+  --glass: rgba(0,0,0,.45);
+  --ok: #10b981;
+  --bad: #ef4444;
+  --hud-top: 15px;                 
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+
+*{ box-sizing:border-box }
+html,body{ height:100%; margin:0 }
+body{
+  background: url("image/background2.png") center center / cover no-repeat fixed;
+  overflow:hidden; color:#fff;
+}
+#game{ position:relative; width:100vw; height:100vh; overflow:hidden }
+
+/* ===== HUD ===== */
+.hud{
+  position:fixed;
+  inset: calc(var(--safe-top) + var(--hud-top)) 5px auto 38px !important;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  justify-content:space-between;
+  pointer-events:none;
+  z-index:40000;
+}
+
+body:not(.in-game):not(.prestart) .hud {
+  display: none !important;
+}
+/* นาฬิกา โผล่เฉพาะตอน in-game เท่านั้น */
+body:not(.in-game) #clock {
+  display: none !important;
+}
+
+/* ===== Game Clock (Top Center, uses existing timer) ===== */
+#clock.clock-pill{
+  position:fixed;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:16000;
+  pointer-events:none;
+  --clock-size: 40px;
+  font-size: var(--clock-size);
+  background: var(--glass);
+  backdrop-filter: blur(6px);
+  color:#fff;
+  font-weight:1000;
+  line-height:1;
+  border-radius:999px;
+  padding:8px 16px;
+  box-shadow:0 4px 18px rgba(0,0,0,.25);
+  text-shadow:0 3px 10px rgba(0,0,0,.55);
+}
+@media (max-width:480px){
+  #clock.clock-pill{ --clock-size: 28px; padding:6px 12px; }
+}
+
+.pill{ background:var(--glass); backdrop-filter:blur(6px); padding:8px 12px; border-radius:999px; box-shadow:0 4px 18px rgba(0,0,0,.25) }
+#timer{ font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.5px; font-size:20px }
+.btn-mini{ pointer-events:auto; background:#1f2937; color:#fff; border:none; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(0,0,0,.25) }
+.btn-mini:hover{ filter:brightness(1.1) }
+
+.score-label{ font-size:20px; font-weight:900; color:#fff; margin-bottom:6px; text-align:center; width:100%; margin-top:-4px; }
+
+/* กล่องคะแนนเป็นตัวเลข ปรับขนาดด้วย --score-size */
+.pill.gold{
+  --score-size: 42px;      
+  background: var(--glass);
+  border-radius: 12px;
+  padding: 6px 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(var(--score-size) * 1.6);
+  box-shadow: 0 4px 18px rgba(0,0,0,.25);
+}
+.pill.gold .num{
+  font-size: var(--score-size);
+  font-weight: 1000;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .5px;
+}
+
+@media (max-width:480px){ .pill.gold{ --gold-size:24px; --gold-cols:8; --gold-rows:2 } }
+
+/* ===== Welcome / Landing ===== */
+#landing{ position:fixed; inset:0; display:flex; flex-direction:column; gap:22px; align-items:center; justify-content:center; background:url("image/background2.png") center/cover no-repeat fixed !important; z-index:20000; transition:opacity .3s ease }
+#landing.hide{ opacity:0; pointer-events:none; visibility:hidden }
+#landing .brand{ width:min(92vw,1100px) }
+#landing .brand img{ width:100%; height:auto; display:block; filter:drop-shadow(0 10px 30px rgba(0,0,0,.6)) }
+#welcome{ position:fixed; inset:0; background:url("image/welcome.png") center/cover no-repeat fixed; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; z-index:25000; transition:opacity .3s ease; }
+#welcome.hide{ opacity:0; pointer-events:none; visibility:hidden }
+#welcome #enterBtn{ padding:12px 28px; font-size:clamp(22px,4vw,36px); font-weight:1000; letter-spacing:.2px; border:0; border-radius:16px; color:#fff; background:rgba(0,0,0,.55); box-shadow:0 10px 28px rgba(0,0,0,.35); cursor:pointer; backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.18) }
+
+#welcome .brand{ width:min(90vw,1000px); 
+        margin-bottom:100px; 
+        display:flex; 
+        justify-content:center 
+}
+
+#welcome .brand 
+        img{ width:130%; 
+        height:auto; display:block; 
+        animation:pulse 3s infinite ease-in-out; 
+        filter:drop-shadow(0 6px 18px rgba(0,0,0,.45)) 
+}
+
+#welcome .welcome-content{ 
+       display:flex; 
+       flex-direction:column; 
+       align-items:center; gap:0; 
+       margin-top:100px 
+}
+@keyframes pulse{ 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.04);opacity:.9} }
+.level-menu{ display:flex; flex-direction:column; gap:14px; width:min(92vw,640px) }
+.levelBtn{ width:100%; padding:10px 16px; font-size:clamp(20px,4vw,34px); font-weight:1000; letter-spacing:.2px; border:0; border-radius:14px; color:#fff; background:rgba(0,0,0,.55); box-shadow:0 10px 28px rgba(0,0,0,.35); cursor:pointer; text-align:center; border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(6px) }
+
+/* ===== หน้าเริ่ม/นับถอยหลัง ===== */
+#startScreen{
+  position:fixed;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.9);
+  z-index:30000;       
+  text-align:center;
+  padding:24px;
+}
+
+#startTitle{ font-size:clamp(26px,5vw,48px); font-weight:900; margin-bottom:10px }
+#startBtn{ margin-top:12px; padding:10px 18px; border:0; border-radius:12px; font-weight:800; cursor:pointer; background:#1f2937; color:#fff }
+#countdown{ display:none; font-size:clamp(56px,12vw,120px); font-weight:1000; line-height:1; margin-top:8px }
+
+#qImg{
+  position:absolute;
+  top: 50%;
+  left: 50%;
+  max-width: min(60vw, 720px);
+  max-height: min(48vh, 480px);
+  width:auto; height:auto;
+  display:none;
+  z-index:9;
+  filter: drop-shadow(0 10px 30px rgba(0,0,0,.45));
+  border-radius: 12px;
+
+  transform: translate(-50%, -50%)
+             translate(var(--fxX, 0), var(--fxY, 0))
+             scale(var(--fxS, 1));
+
+  transition:
+    transform 520ms cubic-bezier(.2,.9,.2,1),
+    opacity 520ms;
+}
+
+
+/* ===== กล่องคำถาม (เวอร์ชันใช้ตัวแปร FX) ===== */
+#questionBox{
+  position: fixed;       
+  top: var(--qTop);       
+  left: 50%;
+  transform: translate(-50%, 0)
+             translate(var(--fxX, 0), var(--fxY, 0))
+             scale(var(--fxS, 1));
+  background:none; border:none; padding:0;
+  font-size: clamp(var(--qFontMin), var(--qFontVW), var(--qFontMax)); 
+  font-weight:1000; color:#fff;
+  text-shadow:0 4px 12px rgba(0,0,0,.8);
+  z-index: 10;
+  white-space:pre; overflow:visible; text-align:center;
+  transition: transform 520ms cubic-bezier(.2,.9,.2,1), opacity 520ms;
+}
+
+#questionBox.pre-drop{
+  top: calc(var(--qTop) - 40px);
+  opacity: 0;
+}
+
+/* ===== ตัวเลือกแบบสี่เหลี่ยมมุมมน ===== */
+.option.circle{
+  position:absolute;
+width: var(--c-w, clamp(200px, 28vw, 360px));
+height: var(--c-h, clamp(130px, 20vw, 240px));
+
+  border-radius: 40px;              /* 👈 มุมมน */
+  border: 6px solid rgba(255,255,255,.25);
+  background: var(--choice-color, #444);  
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+  user-select:none;
+  z-index:12;
+
+  transition:
+    transform 0.2s ease,
+    background 0.3s ease;
+}
+
+.option.locked{
+  pointer-events:none;
+}
+
+.option.circle:hover{
+  transform: scale(1.05);
+}
+
+/* ===== ปุ่มตัวเลือกใหม่ ===== */
+.option.circle.live {
+  background: rgba(0,0,0,.55);                  
+  border: 10px solid #d97706;                    
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);       
+}
+
+.option.circle.non {
+  background: rgba(0,0,0,.55);                  
+  border: 10px solid #a855f7;                  
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);      
+}
+
+.option.circle {
+  --c-sz: clamp(140px, 20vw, 240px);        
+}
+
+/* ===== เอฟเฟกต์เข้าแบบ zoom-in-bounce ===== */
+.option.circle.in-anim {
+  animation: zoomInBounce 650ms cubic-bezier(.25,.8,.25,1) forwards;
+  transform: scale(0.3);      /* เริ่มเล็กและจาง */
+  opacity: 0;
+}
+
+@keyframes zoomInBounce {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }  
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ตัวหนังสือในปุ่ม (ปรับได้ตรงนี้) */
+.option.circle .label {
+  font-size: clamp(40px, 6vw, 80px);
+  font-weight: 900;
+  letter-spacing: .5px;
+  color: #fff;
+
+  white-space: nowrap;      /* ❗ห้ามตัดบรรทัด */
+  display: inline-block;
+  max-width: 90%;
+}
+
+.option.circle.glow{
+  filter: drop-shadow(0 0 10px rgba(250,204,21,.70)) drop-shadow(0 0 18px rgba(250,204,21,.55));
+}
+
+/* ===== เอฟเฟกต์ขยายตอนเลือก ===== */
+.option.circle.selected{
+  transform: scale(1.25);
+  transition: transform 0.18s ease;
+}
+
+/* ===== แถบเวลา ===== */
+#timebarWrap{ position:fixed; left:0; right:0; bottom:0; height:12px; background:rgba(255,255,255,.12); z-index:16000; border-top:1px solid rgba(255,255,255,.2) }
+#timebar{ height:100%; width:0%; background:#10b981; transition:width .1s linear }
+
+/* ===== เอฟเฟกต์/Toast/ภาพผลลัพธ์ ===== */
+#flash{ position:fixed; inset:0; background:transparent; pointer-events:none; z-index:17000 }
+.flash-clear{ animation: flashC 2000ms ease-out }
+@keyframes flashC{ 0%{background:rgba(255,255,255,.55)} 100%{background:transparent} }
+
+.flash-in{ animation: flashIn .35s ease-out }
+@keyframes flashIn{
+  0%{ opacity:0; transform:translate(-50%,-50%) scale(1.04); box-shadow:0 0 0 0 rgba(255,255,255,0), 0 0 0 0 rgba(255,255,255,0) }
+  30%{ opacity:1; box-shadow:0 0 24px 6px rgba(255,255,255,.75), 0 0 64px 12px rgba(255,255,255,.55) }
+  100%{ opacity:1; transform:translate(-50%,-50%) scale(1); box-shadow:none }
+}
+.flash-in-cover{ animation: flashInCover .35s ease-out }
+@keyframes flashInCover{
+  0%{ opacity:0; box-shadow:0 0 0 0 rgba(255,255,255,0), 0 0 0 0 rgba(255,255,255,0) }
+  30%{ opacity:1; box-shadow:0 0 24px 6px rgba(255,255,255,.75), 0 0 64px 12px rgba(255,255,255,.55) }
+  100%{ opacity:1; box-shadow:none }
+}
+
+#roundToast{
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.78); border:1px solid rgba(255,255,255,.22);
+  padding:18px 26px; border-radius:16px; font-size:clamp(22px,3vw,34px); font-weight:900;
+  z-index:17500; display:none; text-align:center; white-space:nowrap; line-height:1.25;
+}
+#roundToast .q{ display:block }
+#roundToast .a{ display:block; margin-top:.15em; opacity:.95 }
+#roundToast .r{ display:block; margin-top:.35em; font-weight:1000 }
+#roundToast .r.ok{ color:var(--ok) }
+#roundToast .r.bad{ color:var(--bad) }
+
+#ansImg{
+  position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; object-position:center;
+  opacity:.95; filter: drop-shadow(0 20px 60px rgba(0,0,0,.50));
+  z-index:17499; display:none; pointer-events:none;
+}
+
+/* ===== กล้อง/แคนวาส AR ===== */
+#cameraMirror{ position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; transform: scaleX(-1); z-index:1; display:none; background:#000 }
+#camCanvas{ position:fixed; inset:0; width:100vw; height:100vh; z-index:2; pointer-events:none; display:none }
+#game{ z-index:3; position:relative }
+
+/* ปุ่ม Mute / Fullscreen (ดันมาอยู่หน้าสุด) */
+#muteBtn, #fsBtn{
+  position: fixed;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 50000; /* สูงกว่า HUD และทุก overlay ในเกม */
+}
+#muteBtn{ bottom:12px }
+#fsBtn{ bottom:62px }
+
+/* ===== Emoji Rain Effect ===== */
+.emoji-rain{
+  position:fixed;
+  top:0;
+  font-size:clamp(40px,6vw,90px);
+  pointer-events:none;
+  z-index:30000;
+  animation:emojiFall linear forwards;
+}
+
+
+
+@keyframes emojiFall{
+  0%{
+    transform:translateY(0) rotate(var(--rotStart));
+    opacity:1;
+  }
+  100%{
+    transform:translateY(110vh) rotate(var(--rotEnd));
+    opacity:0;
+  }
+}
+
+/* ===== เอฟเฟกต์หมุน + จางหายของวงกลม ===== */
+.option.circle.flip-out {
+  animation: flipOut 600ms ease forwards;
+}
+
+@keyframes flipOut {
+  0%   { transform: rotateY(0deg) scale(1); opacity:1; }
+  50%  { transform: rotateY(180deg) scale(1.1); opacity:0.9; }
+  100% { transform: rotateY(360deg) scale(0.8); opacity:0; }
+}
+
+#timebarWrap{ display:none !important }
+
+/* จางหายเรียบ ๆ */
+.option.circle.fade-out {
+  animation: fadeOut 600ms ease forwards;
+}
+
+@keyframes fadeOut {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+/* ===== เอฟเฟกต์จบแบบใหม่ ===== */
+
+/* เฟดตัวหลอก */
+.option.circle.fade-wrong{
+  animation: fadeWrong 400ms ease forwards;
+}
+
+@keyframes fadeWrong{
+  from { opacity:1; }
+  to   { opacity:0; }
+}
+
+.option.circle.fade-correct{
+  animation: fadeCorrect 500ms ease forwards;
+}
+
+@keyframes fadeCorrect{
+  from { opacity:1; }
+  to   { opacity:0; }
+}
+
+/* ตำแหน่งอิสระของข้อความ/รูป (ปรับค่าเลขได้ตามใจ) */
+:root{
+  --qTop: 8vh;    
+  --qLeft: 50%;
+  --qFontMin: 24px;
+  --qFontVW:  25vw;
+  --qFontMax: 100px;
+}
+
+@media (max-width:420px){
+  .option.circle { --c-sz: clamp(110px, 28vw, 180px); }
+}
+
+.option.circle {
+  overflow: visible;
+  contain: layout paint;
+}
+
+/* ===== Decorative Choice Images (Animated) ===== */
+.choice-decor-img{
+  position:absolute;
+  width: clamp(120px, 12vw, 240px);
+  height:auto;
+  pointer-events:none;
+  z-index:20;
+
+  /* เริ่มต้น: จาง + ต่ำลงเล็กน้อย */
+  opacity:0;
+  transform:translate(-50%, -40%) scale(1);
+
+  animation: decorFadeUp 500ms ease forwards;
+}
+
+/* ===== เอฟเฟกต์เข้า: เฟดขึ้น ===== */
+@keyframes decorFadeUp{
+  0%{
+    opacity:0;
+    transform:translate(-50%, -20%) scale(1);
+  }
+  100%{
+    opacity:1;
+    transform:translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ===== เอฟเฟกต์ออก: หดหาย ===== */
+.choice-decor-img.out{
+  animation: decorShrinkOut 350ms ease forwards;
+}
+
+@keyframes decorShrinkOut{
+  0%{
+    opacity:1;
+    transform:translate(-50%, -50%) scale(1);
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%, -50%) scale(0.6);
+  }
+}
+
+.fx{
+  --fxX: 0;
+  --fxY: 0;
+  --fxS: 1;
+  will-change: transform, opacity;
+  transition: transform 520ms cubic-bezier(.2,.9,.2,1), opacity 520ms;
+}
+/* เข้า: slide-in จากบน */
+.in-pre { opacity:0; --fxY: -40px; }
+.in-go  { opacity:1; --fxY: 0;     }
+/* ออก: ตามทิศที่เลือก */
+.out-left  { opacity:0; --fxX: -90px; }
+.out-right { opacity:0; --fxX:  90px; }
+
+/* === สีวงกลมด่าน 2 ให้เหมือนด่านแรก === */
+.option.circle.choiceA {
+  background: rgba(0,0,0,.55);
+  border: 10px solid #a855f7;   /* ม่วงเหมือน .non */
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+}
+.option.circle.choiceB {
+  background: rgba(0,0,0,.55);
+  border: 10px solid #d97706;   /* ส้มเหมือน .live */
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+}
+
+.hud {
+  position: initial !important;   /* ยกเลิก fixed ของกล่องรวม */
+  inset: auto !important;         /* ล้างค่า inset เดิม */
+}
+
+.hud .left,
+.hud .right {
+  position: fixed !important;
+  top: var(--hud-top) !important;   /* ใช้ตัวแปรขยับขึ้น/ลงได้ */
+  z-index: 40000 !important;  /* ให้แขนซ้าย/ขวาอยู่บนสุดเหมือนกัน */
+  pointer-events: none;
+}
+
+.hud .left { left: 20px !important; }
+.hud .right { right: 20px !important; }
+
+.hud .btn-mini {
+  pointer-events: auto;   /* ให้ปุ่มกดได้ตามปกติ */
+}
+
+/* ===== Result Panel (สรุปคะแนนสวย ๆ) ===== */
+.result-panel{
+  --panel-bg: rgba(20,20,20,.92);
+  --panel-br: 20px;
+  --panel-bd: 1px solid rgba(255,255,255,.12);
+  --shadow: 0 20px 60px rgba(0,0,0,.55);
+  background: var(--panel-bg);
+  border: var(--panel-bd);
+  padding: clamp(20px, 4vw, 32px);
+  border-radius: var(--panel-br);
+  width: min(92vw, 640px);
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: clamp(12px, 2vw, 18px);
+  text-align: center;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+
+.result-title{
+  margin: 0;
+  font-weight: 1000;
+  font-size: clamp(28px, 4.5vw, 44px);
+  letter-spacing: .2px;
+  text-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+
+.badge{
+  font-size: clamp(56px, 10vw, 120px);
+  line-height: 1;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,.45));
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.result-metrics{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(10px, 2vw, 16px);
+  margin-top: 4px;
+}
+
+/* ===== Correct Answer List ===== */
+
+.result-answers{
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.answers-title{
+  font-size: clamp(18px,3vw,26px);
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+#correctList{
+  display:grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(160px, max-content));
+
+  gap:6px 22px;
+  justify-content:center;
+  justify-items:center;
+
+  font-size: clamp(18px,3vw,26px);
+  font-weight:900;
+}
+
+.correct-pair{
+  white-space:nowrap;
+}
+
+.metric{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: clamp(10px, 2vw, 16px);
+  box-shadow: 0 8px 26px rgba(0,0,0,.25) inset, 0 8px 24px rgba(0,0,0,.25);
+}
+
+.metric .label{
+  font-size: clamp(14px, 2.2vw, 18px);
+  opacity: .9;
+  margin-bottom: 4px;
+}
+
+.metric .value{
+  font-size: clamp(28px, 5.5vw, 52px);
+  font-weight: 1000;
+  line-height: 1;
+  letter-spacing: .3px;
+}
+
+/* ปุ่มใหญ่ขึ้น + สีชัด */
+.result-actions{
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.btn{
+  appearance: none;
+  border: none;
+  border-radius: 14px;
+  padding: clamp(10px, 2.2vw, 14px) clamp(16px, 3.5vw, 24px);
+  font-weight: 900;
+  font-size: clamp(16px, 2.8vw, 20px);
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  transition: transform .08s ease, filter .15s ease, box-shadow .15s ease;
+}
+
+.btn:active{ transform: translateY(1px) scale(.99); }
+
+.btn.strong{
+  color: #fff;
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+  border: 1px solid rgba(255,255,255,.15);
+}
+.btn.strong:hover{ filter: brightness(1.08); }
+
+.btn.ghost{
+  color: #fff;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18);
+}
+.btn.ghost:hover{ filter: brightness(1.1); }
+
+
+</style>
+</head>
+<body>
+
+<!-- ==== AR Mirror ==== -->
+<video id="cameraMirror" playsinline muted></video>
+<canvas id="camCanvas"></canvas>
+
+<div id="game" aria-label="สนามเกม">
+  <div id="questionBox" aria-live="polite"></div>
+  <img id="qImg" alt="ภาพประกอบคำถาม" />
+</div>
+
+<!-- ===== Welcome (หน้าสุด) ===== -->
+<div id="welcome" role="dialog" aria-modal="true">
+  <div class="welcome-content">
+    <div class="brand"><img src="image/banner2.png" alt="Banner"></div>
+    <button id="enterBtn">เข้าสู่เกม</button>
+  </div>
+</div>
+
+<!-- ===== Landing ===== -->
+<div id="landing" role="dialog" aria-modal="true" class="hide">
+  <div class="brand"><img src="image/banner2.png" alt="Banner"></div>
+<div class="level-menu">
+  <button class="levelBtn" data-level="1">คำพ้องรูป</button>
+  <button class="levelBtn" data-level="2">คำพ้องเสียง</button>
+  <button class="levelBtn" data-level="3">คำพ้องความหมาย</button>
+  <button class="levelBtn" id="guideBtn">กติกาการเล่น 📖</button>
+   </div>
+</div>
+
+<!-- ===== ภารกิจ / หน้าเริ่ม ===== -->
+<div id="startScreen">
+  <div id="startTitle">ภารกิจ : จับคู่คำพ้องให้ถูกต้อง</div>
+  <button id="startBtn">เริ่ม</button>
+  <div id="countdown">3</div>
+</div>
+
+<!-- ===== คู่มือ ===== -->
+<div id="guideScreen" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:url('image/background2.png') center/cover no-repeat; z-index:20001">
+  <div class="guide-wrap" style="width:min(95vw, 1200px); max-height:92vh; display:flex; flex-direction:column; gap:10px; align-items:center; justify-content:center">
+    <img src="image/guide.png" alt="คู่มือเกม" style="width:100%; height:auto; max-height:92vh; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.55); display:block">
+    <button id="guideBack" class="btn-mini">เมนูหลัก</button>
+  </div>
+</div>
+
+<!-- ===== HUD ===== -->
+<div class="hud">
+  <div class="left">
+    <div class="stack">
+      <div style="display:flex; gap:8px;">
+        <button id="quickRestart" class="btn-mini">หน้าหลัก</button>
+        <button id="pauseBtn" class="btn-mini">⏸ หยุด</button>
+        <button id="camBtn" class="btn-mini">📷: ปิด</button>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="stack" style="align-items:flex-end">
+      <div class="score-label">คะแนน</div>
+      <div id="goldWrap" class="pill gold" aria-live="polite" title="คะแนน"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== แถบเวลา ===== -->
+<div id="timebarWrap"><div id="timebar"></div></div>
+<div id="flash"></div>
+<div id="roundToast"></div>
+<img id="ansImg" src="" alt="answer background">
+
+<!-- ===== ป๊อปอัปจบด่าน ===== -->
+<div id="overlay" style="visibility:hidden; opacity:0; transition:.25s; position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.55); z-index:100000">
+  <div class="result-panel">
+    <div class="badge" id="scoreBadge" aria-hidden="true">🏆</div>
+    <h1 class="result-title" id="endTitle">หมดเวลา</h1>
+
+<div class="result-answers">
+  <div class="answers-title">คำตอบที่ถูก</div>
+  <div id="correctList"></div>
+</div>
+
+<div class="result-metrics">
+  <div class="metric">
+    <div class="label">คะแนน</div>
+    <div class="value"><b id="finalScore">0</b></div>
+  </div>
+</div>
+
+    <div class="result-actions">
+      <button class="btn strong" id="restartBtn">เริ่มใหม่</button>
+      <button class="btn ghost" id="selectLevelBtn">กลับสู่หน้าหลัก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== เสียง ===== -->
+<audio id="winSound" preload="auto" src="image/win2.mp3"></audio>
+<audio id="bgm" preload="auto" loop src="image/bgm3.mp3"></audio>
+<audio id="selectSound" preload="auto" src="image/select.mp3"></audio>
+<audio id="choose1Sound" preload="auto" src="image/choose1.mp3"></audio>
+<audio id="choose2Sound" preload="auto" src="image/choose2.mp3"></audio>
+<audio id="correctSound" preload="auto" src="image/correct.mp3"></audio>
+<audio id="failSound" preload="auto" src="image/fail.mp3"></audio>
+<audio id="questionSound" preload="auto" src="image/question2.mp3"></audio>
+
+<!-- ===== ปุ่ม Mute / Fullscreen ===== -->
+<button id="muteBtn" aria-pressed="false" title="Mute / Unmute">🔊</button>
+<button id="fsBtn" aria-pressed="false" title="เข้าสู่โหมดเต็มจอ">⛶</button>
+
+<!-- ===== ควบคุม Mute ===== -->
+<script>
+(function(){
+  const muteBtn = document.getElementById('muteBtn');
+  const bgm = document.getElementById('bgm');
+  if(!muteBtn || !bgm) return;
+
+  let isMuted = false;
+
+  function applyMute(m){
+    isMuted = !!m;
+
+    // 🔊 ปิดเฉพาะเพลงพื้นหลัง
+    bgm.muted = isMuted;
+
+    muteBtn.setAttribute('aria-pressed', String(isMuted));
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+  }
+
+  muteBtn.addEventListener('click', () => applyMute(!isMuted));
+})();
+</script>
+
+<!-- ===== ควบคุม Fullscreen ===== -->
+<script>
+(function(){
+  const fsBtn = document.getElementById('fsBtn');
+  if (!fsBtn) return;
+  function fsEnabled(){ return document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled }
+  function isFull(){ return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement }
+  function requestFS(){ const el=document.documentElement; (el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen)?.call(el) }
+  function exitFS(){ (document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen)?.call(document) }
+  function render(){ const on=!!isFull(); fsBtn.setAttribute('aria-pressed', String(on)); fsBtn.title = on ? 'ออกจากโหมดเต็มจอ' : 'เข้าสู่โหมดเต็มจอ'; fsBtn.textContent = on ? '🗗' : '⛶' }
+  if (!fsEnabled()){ fsBtn.style.display='none'; return }
+  fsBtn.addEventListener('click', () => { if(isFull()) exitFS(); else requestFS() });
+  document.addEventListener('fullscreenchange', render);
+  document.addEventListener('webkitfullscreenchange', render);
+  document.addEventListener('msfullscreenchange', render);
+  render();
+})();
+</script>
+
+<!-- ===== ระบบเกม (2 วงกลมเท่านั้น) ===== -->
+<script>
+(()=>{
+// กันรอหลอน ๆ ถ้ายังไม่พรีโหลด
+window.__ALL_IMAGES_READY__ = false;
+
+/* ===== Random Background System (ใช้เฉพาะตอนปิดกล้อง) ===== */
+function randomizeBackgroundIfCameraOff(){
+  const video = document.getElementById('cameraMirror');
+
+  if(video && video.srcObject){
+    return;
+  }
+
+  const BG_LIST = [
+    "image/bg1.png",
+    "image/bg2.png",
+    "image/bg3.png",
+    "image/bg4.png",
+  ];
+
+  const pick = BG_LIST[Math.floor(Math.random() * BG_LIST.length)];
+
+  document.body.style.background =
+    `url("${pick}") center center / cover no-repeat fixed`;
+}
+
+  /* ---------- DOM ---------- */
+  const game = document.getElementById('game');
+  const qBox = document.getElementById('questionBox');
+  const qImg = document.getElementById('qImg');
+  const timebar = document.getElementById('timebar');
+  const timebarWrap = document.getElementById('timebarWrap');
+  const flash = document.getElementById('flash');
+  const toast = document.getElementById('roundToast');
+
+/* ===== Clock UI for existing game timer ===== */
+const clockEl = document.createElement('div');
+clockEl.id = 'clock';
+clockEl.className = 'clock-pill';
+clockEl.textContent = '02:00';               // ค่าเริ่มต้นตาม GAME_DURATION_MS
+document.body.appendChild(clockEl);
+
+let clockUIItv = null;        // interval สำหรับอัปเดตตัวเลข
+let clockState = 'idle';       // 'idle' | 'run' | 'pause' | 'end'
+
+function fmtClock(ms){
+  const total = Math.max(0, Math.ceil(ms/1000));
+  const m = String(Math.floor(total/60)).padStart(2,'0');
+  const s = String(total % 60).padStart(2,'0');
+  return m + ':' + s;
+}
+function renderClockFromGame(){
+  const ms = (clockState === 'run')
+    ? Math.max(0, (gameEndAt - performance.now()))
+    : remainingMs; // pause/idle ใช้ค่าที่พักไว้
+  clockEl.textContent = fmtClock(ms);
+}
+function startClockUI(){
+  clockState = 'run';
+  if (!clockUIItv) clockUIItv = setInterval(renderClockFromGame, 250);
+  renderClockFromGame();
+}
+function pauseClockUI(){
+  clockState = 'pause';
+  if (clockUIItv){ clearInterval(clockUIItv); clockUIItv = null; }
+  renderClockFromGame();
+}
+function resumeClockUI(){
+  clockState = 'run';
+  if (!clockUIItv) clockUIItv = setInterval(renderClockFromGame, 250);
+  renderClockFromGame();
+}
+function stopClockUI(){
+  clockState = 'end';
+  if (clockUIItv){ clearInterval(clockUIItv); clockUIItv = null; }
+  renderClockFromGame();
+}
+function resetClockUI(){
+  clockState = 'idle';
+  if (clockUIItv){ clearInterval(clockUIItv); clockUIItv = null; }
+  // เซ็ตตัวเลขตามค่าเริ่มต้นของ GAME_DURATION_MS
+  clockEl.textContent = fmtClock(GAME_DURATION_MS);
+}
+
+const overlay = document.getElementById('overlay');
+const finalScoreEl = document.getElementById('finalScore');
+const restartBtn = document.getElementById('restartBtn');
+const selectLevelBtn = document.getElementById('selectLevelBtn');
+
+    window.currentLevel = 1; // เริ่มที่ด่าน 1
+
+  // Welcome -> Landing
+  (function(){
+    const welcome = document.getElementById('welcome');
+    const enterBtn = document.getElementById('enterBtn');
+    const landing = document.getElementById('landing');
+// ↓ วางหลัง const welcome / enterBtn / landing
+enterBtn.addEventListener('click', async ()=>{
+  // ถ้าโหลดยังไม่เสร็จ ให้รอจนโหลดครบ
+  while (!window.__ALL_IMAGES_READY__) {
+    await new Promise(r=>setTimeout(r,120));
+  }
+  welcome.classList.add('hide');
+  landing.classList.remove('hide');
+  bgm?.play?.().catch(()=>{});
+});
+
+  })();
+
+function renderGold(score){
+  const n = Number(score) || 0;
+  goldWrap.innerHTML = `<span class="num">${n}</span>`;
+  goldWrap.setAttribute('aria-label', `คะแนน ${n}`);
+}
+
+// ตัวอย่าง ปรับตอนโหลด
+if (window.innerWidth < 480) {
+  goldWrap.style.setProperty('--score-size', '28px');
+}
+
+  // เสียง
+  const hitSound = document.getElementById('hitSound');
+  const winSound = document.getElementById('winSound');
+  const bgm = document.getElementById('bgm');
+  const selectSound = document.getElementById('selectSound');
+const correctSound = document.getElementById('correctSound');
+const failSound = document.getElementById('failSound');
+const questionSound = document.getElementById('questionSound');
+
+  if (bgm) {
+    bgm.loop = true;
+    bgm.addEventListener('ended', () => {
+      try {
+        bgm.currentTime = 0;
+        bgm.play()?.catch(()=>{});
+      } catch (_) {}
+    });
+  }
+
+  const VOL_BGM=0.2, VOL_SELECT=0.75, VOL_HIT=0.75, VOL_WIN=0.85;
+
+
+  function applyBackendVolume(){ if(bgm)bgm.volume=VOL_BGM; if(selectSound)selectSound.volume=VOL_SELECT; if(hitSound)hitSound.volume=VOL_HIT; if(winSound)winSound.volume=VOL_WIN; } applyBackendVolume();
+  function isGlobalMuted(){ const a=document.querySelector('audio'); return !!a && a.muted===true }
+  function playSfx(el,vol){ try{ const n=el?.cloneNode(true); if(!n)return; n.volume=(typeof vol==='number')?Math.max(0,Math.min(1,vol)):(el.volume??1); n.muted=isGlobalMuted(); n.play?.(); }catch(_){} }
+
+  // util
+  const rand=(min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+  const pick=(arr)=>arr[rand(0,arr.length-1)];
+  const shuffle=(arr)=>{ const A=arr.slice(); for(let i=A.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [A[i],A[j]]=[A[j],A[i]] } return A };
+/* ===== Group Memory System (กันสุ่มซ้ำกลุ่ม) ===== */
+
+let usedGroupsByLevel = {
+  1: new Set(),
+  2: new Set(),
+  3: new Set()
+};
+
+function pickGroupNoRepeat(allGroups, level){
+
+  const used = usedGroupsByLevel[level];
+
+  // กลุ่มที่ยังไม่เคยใช้
+  const remain = allGroups.filter(g => !used.has(g));
+
+  // ถ้าใช้ครบแล้ว → รีเซ็ต
+  if(remain.length === 0){
+    used.clear();
+    return pick(allGroups);
+  }
+
+  const g = pick(remain);
+  used.add(g);
+  return g;
+}
+
+function resetGroupMemory(){
+  usedGroupsByLevel[1].clear();
+  usedGroupsByLevel[2].clear();
+  usedGroupsByLevel[3].clear();
+}
+
+/* ===== Decorative Image System ===== */
+const DECOR_IMAGES = [
+  "image/choice1.png",
+  "image/choice2.png",
+  "image/choice3.png",
+  "image/choice4.png",
+  "image/choice5.png",
+  "image/choice6.png",
+  "image/choice7.png",
+  "image/choice8.png",
+];
+
+function spawnDecorImages(){
+  const options = document.querySelectorAll('.option.circle');
+  if(options.length !== 4) return;
+
+  const imgs = shuffle(DECOR_IMAGES).slice(0,4);
+
+// ===== ปรับระยะเยื้องรูปตกแต่ง / ขวา =====
+const LEFT_OFFSET_X  = 170;    // ปรับเฉพาะฝั่งซ้าย
+const RIGHT_OFFSET_X = 170;    // ปรับเฉพาะฝั่งขวา
+
+const LEFT_OFFSET_Y  = -120;   // ยกซ้ายขึ้น/ลง
+const RIGHT_OFFSET_Y = -120;   // ยกขวาขึ้น/ลง
+// ==========================================
+
+  options.forEach((opt, i)=>{
+
+    const rect = opt.getBoundingClientRect();
+
+    const img = document.createElement('img');
+    img.src = imgs[i];
+    img.className = 'choice-decor-img';
+
+    // ===== แยกกลุ่มซ้าย / ขวา =====
+    const isLeftGroup = (i === 0 || i === 2);
+
+    let centerX = rect.left + rect.width/2;
+    let centerY = rect.top  + rect.height/2;
+
+if(isLeftGroup){
+  centerX -= LEFT_OFFSET_X;
+  centerY += LEFT_OFFSET_Y;
+}else{
+  centerX += RIGHT_OFFSET_X;
+  centerY += RIGHT_OFFSET_Y;
+}
+
+    img.style.left = centerX + 'px';
+    img.style.top  = centerY + 'px';
+
+    document.body.appendChild(img);
+  });
+}
+
+function clearDecorImages(){
+  document.querySelectorAll('.choice-decor-img').forEach(n=>{
+    n.classList.add('out');  // ใส่คลาสให้เล่นเอฟเฟกต์ออก
+    n.addEventListener('animationend', ()=>{
+      n.remove();
+    }, { once:true });
+  });
+}
+
+/* ===== Emoji Rain System ===== */
+function spawnEmojiRain(ok){
+
+  const goodEmojis = ["🪙","💰","💸","💎"];
+  const badEmojis  = ["⭕","💢","💀","❌"];
+
+  const pool = ok ? goodEmojis : badEmojis;
+
+  const COUNT = 40;   // 👈 ปริมาณที่ร่วง
+
+  for(let i=0;i<COUNT;i++){
+
+    const el = document.createElement('div');
+    el.className = "emoji-rain";
+    el.textContent = pool[Math.floor(Math.random()*pool.length)];
+// 🔥 สุ่มทิศหมุน
+const direction = Math.random() < 0.5 ? -1 : 1;
+const spinAmount = 360 + Math.random()*720;
+
+el.style.setProperty('--rotStart', '0deg');
+el.style.setProperty('--rotEnd', (direction * spinAmount) + 'deg');
+
+    // สุ่มตำแหน่งแนวนอน
+    el.style.left = Math.random()*100 + "vw";
+        el.style.top = (-100 - Math.random()*200) + "px";
+
+    // สุ่มความเร็ว
+    const duration = 1.5 + Math.random()*1.5;
+    el.style.animationDuration = duration + "s";
+
+    // สุ่ม delay
+    el.style.animationDelay = Math.random()*0.5 + "s";
+
+    document.body.appendChild(el);
+
+    el.addEventListener("animationend", ()=> el.remove(), {once:true});
+  }
+}
+
+  /* ---------- สถานะเกม ---------- */
+
+const GAME_DURATION_MS = 120000; // 2 นาที
+let gameTimerId = null;
+let gameEndAt = 0;
+let remainingMs = GAME_DURATION_MS;
+
+function clearGameTimer(){
+  if (gameTimerId){ clearTimeout(gameTimerId); gameTimerId = null; }
+}
+
+function scheduleGameTimer(ms){
+  clearGameTimer();
+  gameTimerId = setTimeout(()=>{
+    // ครบเวลา → จบด่านทันที (สรุปคะแนน)
+    if(!ended){ endLevel(); }
+  }, Math.max(0, ms|0));
+}
+
+function startGameTimer(){
+  remainingMs = GAME_DURATION_MS;
+  gameEndAt = performance.now() + remainingMs;
+  scheduleGameTimer(remainingMs);
+startClockUI();   
+}
+
+function pauseGameTimer(){
+  if (gameTimerId){
+    remainingMs = Math.max(0, gameEndAt - performance.now());
+    clearGameTimer();
+       pauseClockUI();     
+  }
+}
+
+function resumeGameTimer(){
+  if (remainingMs > 0 && !ended){
+    gameEndAt = performance.now() + remainingMs;
+    scheduleGameTimer(remainingMs);
+        resumeClockUI();   
+  }
+}
+
+  const BLANK_MS=800, Q_DROP_MS=600, Q_HOLD_MS=400, OPT_IN_MS=200, RESULT_MS=1000;
+
+  let running=false, ended=false, paused=false;
+  window.ended = ended; // ✅ sync ค่าเริ่มต้นไปยัง global
+  let score=0, round=0;
+    let correctPairs = [];
+  let roundTimer=null, timeLeft=0, awaitingAnswer=false;
+
+
+  // เลื่อนวงกลมขึ้นลงเป็นช่วง ๆ
+  let driftTimers = [];
+  function clearDrifts(){ driftTimers.forEach(id=>clearInterval(id)); driftTimers=[]; }
+  function clearRoundObjects(){ 
+          clearDrifts(); document.querySelectorAll('.option').forEach(n=>n.remove()); 
+}
+
+function restorePlayfield(){
+  game.style.visibility = 'visible';
+  qBox.style.display    = 'block';
+}
+
+// หยุด/ซ่อนสนามเกมทั้งหมด ระหว่างหน้าสรุปคะแนน
+function freezePlayfield(on){
+  awaitingAnswer = false;        
+  stopTimebar();                  
+  clearRoundObjects();            
+  // ซ่อน/ล้างคำถามและรูป
+  qBox.textContent = '';
+  qBox.style.display = on ? 'none' : 'block';
+  if (qImg){
+    qImg.style.display = on ? 'none' : 'block';
+    if(on) qImg.removeAttribute('src');
+  }
+  game.style.visibility = on ? 'hidden' : 'visible';
+}
+
+  function updateHUD(){ renderGold(score); 
+}
+
+function resetState(){ 
+  clearCountdown();
+  running = false;
+  ended   = true;
+  window.ended = ended;
+  paused  = false;
+  clearRoundObjects();
+    clearDecorImages();
+  clearGameTimer();
+  if (roundTimer){ clearInterval(roundTimer); roundTimer = null; }
+
+  document.body.classList.remove('in-game');
+  score = 0;
+  round = 0;
+   resetGroupMemory();
+    correctPairs = [];
+  timeLeft = 0;
+  awaitingAnswer = false;
+  updateHUD();
+  qBox.textContent = '';
+  qBox.style.top = '-160px';
+  qBox.style.display = 'none';
+  if (qImg) {
+    qImg.style.display = 'none';
+    qImg.removeAttribute('src');
+  }
+
+  stopTimebar();
+  resetClockUI();
+  game.style.visibility = 'visible';  
+}
+
+
+  function showToast(payload){
+    const ansImg = document.getElementById('ansImg');
+    const data = (typeof payload === 'object' && payload) ? payload : { q:String(payload||''), a:'', ok:false };
+    const { q='', a='', ok=false } = data;
+    const esc = (s)=> String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    toast.innerHTML = `<span class="q">${esc(q)}</span><span class="a">${esc(a||'—')}</span><span class="r ${ok?'ok':'bad'}">${ok?'ถูกต้อง':'ไม่ถูกต้อง'}</span>`;
+    toast.style.display='inline-block';
+    if(ansImg){ ansImg.onerror=()=>{ansImg.style.display='none'}; ansImg.src='image/ans1.png'; ansImg.style.display='block'; }
+    const playFlashIn = (el,cover=false)=>{ if(!el)return; el.classList.remove('flash-in','flash-in-cover'); void el.offsetWidth; el.classList.add(cover?'flash-in-cover':'flash-in'); el.addEventListener('animationend',()=>el.classList.remove('flash-in','flash-in-cover'),{once:true}); };
+    playFlashIn(ansImg,true); playFlashIn(toast,false);
+    setTimeout(()=>{ toast.style.display='none'; if(ansImg) ansImg.style.display='none'; }, RESULT_MS);
+  }
+
+// ตัดระบบแถบเวลา + ตัวจับเวลาออก
+function startTimebar(){}              
+function stopTimebar(){}               
+function updateTimebar(){}              
+
+function dropQuestion(text, imgSrc){
+  // ข้อความ
+  qBox.textContent = String(text);
+
+  // รีเซ็ตของค้างจากรอบก่อน
+  qBox.style.transition = '';
+  qImg.style.transition = '';
+  qBox.style.opacity = '';
+  qImg.style.opacity = '';
+  qBox.style.pointerEvents = 'auto';
+  qBox.style.top = 'var(--qTop)';
+  qBox.style.display = 'block';
+
+  // ซ่อนข้อความไว้จนกว่ารูปจะพร้อม
+  qBox.style.visibility = 'hidden';
+
+  // รีเซ็ตคลาส FX
+  qBox.classList.remove('out-left','out-right','in-go','in-pre');
+  qImg.classList.remove('out-left','out-right','in-go','in-pre');
+  qImg.classList.add('fx','in-pre');   // qBox ไม่มี fx/in-pre แล้ว
+
+  // รูปภาพ
+  if (qImg){
+    if (imgSrc){
+      qImg.style.display = 'none';
+
+      const startIn = () => {
+        qImg.style.display = 'block';
+        qBox.style.visibility = 'visible';  // ✅ โชว์ข้อความเมื่อรูปพร้อมแล้ว
+        requestAnimationFrame(() => {
+          // ใส่คลาสเข้าให้รูป (และจะใส่ให้ qBox ถ้าต้องการเอฟเฟกต์ข้อความด้วย)
+          qImg.classList.add('in-go');
+          // ถ้าอยากให้ข้อความนิ่ง ๆ ไม่ต้องใส่ in-go ให้ qBox
+          // qBox.classList.add('in-go');
+        });
+      };
+      const textOnly = () => {
+        qImg.style.display = 'none';
+        qBox.style.visibility = 'visible';   
+        // ถ้าอยากให้ข้อความนิ่ง ๆ ก็คงไว้แบบไม่มี in-go
+        // requestAnimationFrame(() => qBox.classList.add('in-go'));
+      };
+
+      qImg.onload  = startIn;
+      qImg.onerror = textOnly;
+      qImg.src = imgSrc;
+
+      // เผื่อรูป cache แล้ว
+      if (qImg.complete && qImg.naturalWidth > 0) startIn();
+
+    } else {
+      // ไม่มีรูป → แสดงข้อความทันที
+      qImg.style.display = 'none';
+      qImg.removeAttribute('src');
+      qBox.style.visibility = 'visible';
+      // requestAnimationFrame(() => qBox.classList.add('in-go')); // ถ้าอยากมีเอฟเฟกต์
+    }
+  }
+}
+
+
+/* ===== ระบบ 4 ตัวเลือก ===== */
+
+let selected = [];
+
+/* ===== วางตำแหน่ง 2x2 แบบตายตัว ===== */
+function spawnFourCircles(choices){
+
+// ===== ตำแหน่งตัวเลือก (LEFT / RIGHT hybrid) =====
+
+const LEFT_MARGIN  = innerWidth * 0.05;
+const RIGHT_MARGIN = innerWidth * 0.05;
+
+const TOP_ROW_Y    = innerHeight * 0.18;
+const BOTTOM_ROW_Y = innerHeight * 0.67;
+
+const positions = [
+  { left: LEFT_MARGIN,  top: TOP_ROW_Y },     // ซ้ายบน
+  { right: RIGHT_MARGIN, top: TOP_ROW_Y },    // ขวาบน
+  { left: LEFT_MARGIN,  top: BOTTOM_ROW_Y },  // ซ้ายล่าง
+  { right: RIGHT_MARGIN, top: BOTTOM_ROW_Y }  // ขวาล่าง
+];
+
+const COLOR_SET = [
+  "#facc15", // เหลือง
+  "#ef4444", // แดง
+  "#3b82f6", // น้ำเงิน
+  "#a855f7", // ม่วง
+  "#10b981", // เขียว
+  "#f97316", // ส้ม
+];
+
+const roundColors = shuffle(COLOR_SET).slice(0, 4);
+  choices.forEach((wordObj, index)=>{
+
+    const el = document.createElement('div');
+    el.className = 'option circle in-anim';
+    el.style.setProperty('--choice-color', roundColors[index]);
+    el.dataset.group = wordObj.group;
+        el.dataset.isWrong = wordObj.isWrong ? "true" : "false";
+        el.dataset.audio = wordObj.audio ? wordObj.audio : "";
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = wordObj.word;
+
+// ===== Auto shrink font if text overflow =====
+requestAnimationFrame(()=>{
+  let size = 80;
+  const minSize = 26;
+
+  label.style.fontSize = size + "px";
+
+  while(label.scrollWidth > el.clientWidth*0.8 && size > minSize){
+    size -= 2;
+    label.style.fontSize = size + "px";
+  }
+});
+
+    el.appendChild(label);
+    game.appendChild(el);
+el.addEventListener('animationend', ()=>{
+  el.classList.remove('in-anim');
+}, { once:true });
+
+const pos = positions[index];
+
+if(pos.left !== undefined){
+  el.style.left = pos.left + 'px';
+}else{
+  el.style.right = pos.right + 'px';
+}
+
+el.style.top = pos.top + 'px';
+
+    el.addEventListener('click', ()=> handleSelect(el));
+  });
+  spawnDecorImages(); 
+}
+
+function handleSelect(el){
+
+  if (ended || !awaitingAnswer) return;
+
+  // 🔒 ถ้าเคยเลือกแล้ว ห้ามกดซ้ำ
+  if (el.classList.contains('locked')) return;
+
+  // ล็อกตัวเลือกนี้ทันที
+  el.classList.add('locked');
+
+  // 🔊 เล่นเสียง
+  try{
+    const audioSrc = el.dataset.audio;
+    if(audioSrc){
+      const s = new Audio(audioSrc);
+      s.volume = 0.9;
+      s.play();
+    }
+  }catch(_){}
+
+  el.classList.add('glow');
+  el.classList.add('selected');
+
+  selected.push(el);
+
+  // ยังเลือกไม่ครบ 2 ตัว
+  if (selected.length < 2) return;
+
+  // ปิดการตอบระหว่างตรวจ
+  awaitingAnswer = false;
+
+  const w1 = selected[0].dataset.isWrong === "true";
+  const w2 = selected[1].dataset.isWrong === "true";
+
+  let ok;
+
+  if (w1 || w2){
+    ok = false;
+  } else {
+    const g1 = selected[0].dataset.group;
+    const g2 = selected[1].dataset.group;
+    ok = (g1 === g2);
+  }
+
+  endRound(ok, el, false);
+
+  selected = [];
+}
+
+
+
+function tryAnswer(el){
+    if (ended) return;   
+  if(!awaitingAnswer) return;
+  const ok = (el.dataset.correct === 'true');
+  awaitingAnswer=false;
+
+  // เอฟเฟกต์ปุ่มเดิม (หมุน/หาย)
+  el.classList.add('flip-out');
+  el.addEventListener('animationend', ()=> {
+    if(el && el.parentNode){ el.remove(); }
+  }, {once:true});
+
+  // ✅ ปุ่มที่ไม่ถูกเลือก → fade-out พร้อมกัน
+  document.querySelectorAll('.option.circle').forEach(btn=>{
+    if(btn !== el){
+      btn.classList.add('fade-out');
+      btn.addEventListener('animationend', ()=> btn.remove(), {once:true});
+    }
+  });
+
+  // ===== NEW: สไลด์ qBox + qImg ออกไปทิศทางที่เลือก แล้ว "รอ" ให้จบก่อน =====
+  const side = el.dataset.side || ((el.getBoundingClientRect().left < innerWidth/2) ? 'left' : 'right');
+
+  // รีเซ็ตสถานะเข้า แล้วสั่งออก
+  qBox.classList.remove('in-pre','in-go','out-left','out-right');
+  qImg.classList.remove('in-pre','in-go','out-left','out-right');
+  qBox.classList.add('fx', side==='left' ? 'out-left' : 'out-right');
+  qImg.classList.add('fx', side==='left' ? 'out-left' : 'out-right');
+
+  // รอ transition ของทั้ง qBox และ qImg (มี timeout กันพลาด)
+  waitForBothTransitions([qBox, qImg], 600).then(()=>{
+    // จบเอฟเฟกต์แล้ว ค่อยไปสรุปผลรอบ
+    endRound(ok, el, false);
+  });
+
+  try{ (selectSound?.cloneNode(true)).play?.() }catch(_){}
+}
+
+/* Helper: รอจนกว่าทุก element จะยิง 'transitionend' อย่างน้อย 1 ครั้ง หรือครบ timeout (ms) */
+function waitForBothTransitions(els, timeoutMs=600){
+  const once = (node, type) => new Promise(res=>{
+    let done=false;
+    const h = ()=>{ if(!done){ done=true; node.removeEventListener(type,h); res(); } };
+    node.addEventListener(type, h, {once:true});
+    // กันกรณีไม่มี transition หรือคลาสซ้ำเดิม
+    setTimeout(h, timeoutMs);
+  });
+  return Promise.all( (els||[]).map(n=> once(n,'transitionend')) );
+}
+
+function endRound(ok, pickedElOrNull, timeout=false){
+
+  awaitingAnswer = false;
+  const allOptions = [...document.querySelectorAll('.option.circle')];
+
+  clearDecorImages();
+
+  // ===== อัปเดตคะแนน =====
+  if (ok) {
+    score += 1;
+  } else {
+    score -= 1;
+  }
+
+  updateHUD();
+  spawnEmojiRain(ok);
+
+  // 🔊 หน่วงเสียงผลลัพธ์ 1 วินาที (กันชนเสียงเลือก)
+  setTimeout(()=>{
+    try{
+      if(ok){
+        const s = correctSound?.cloneNode(true);
+        if(s){
+          s.volume = 0.9;
+          s.play?.();
+        }
+      }else{
+        const s = failSound?.cloneNode(true);
+        if(s){
+          s.volume = 0.9;
+          s.play?.();
+        }
+      }
+    }catch(_){}
+  }, 500);   // 👈 หน่วง 1000ms ตรงนี้
+
+
+  // ===== พฤติกรรม ถูก / ผิด =====
+
+  if (ok){
+
+if(ok && selected.length===2){
+
+  const w1 = selected[0].querySelector('.label').textContent;
+  const w2 = selected[1].querySelector('.label').textContent;
+
+  correctPairs.push(`${w1} - ${w2}`);
+}
+
+    const correctGroup = selected[0]?.dataset.group;
+    const correctEls = allOptions.filter(el => 
+      el.dataset.group === correctGroup &&
+      el.dataset.isWrong !== "true"
+    );
+
+    const wrongEls = allOptions.filter(el => 
+      !correctEls.includes(el)
+    );
+
+    // เฟดตัวหลอกทันที
+    wrongEls.forEach(el=>{
+      el.classList.add('fade-wrong');
+    });
+
+    // หน่วงก่อนเฟดตัวถูก
+    setTimeout(()=>{
+
+      correctEls.forEach(el=>{
+        el.classList.add('fade-correct');
+      });
+
+      // ค้างก่อนเปลี่ยนรอบ
+      setTimeout(()=>{
+        clearRoundObjects();
+        round++;
+        nextRound();
+      }, 2100);
+
+    }, 2000);
+
+  } else {
+
+    // ❌ ตอบผิด
+    allOptions.forEach(el=>{
+      el.classList.add('fade-wrong');
+    });
+
+    setTimeout(()=>{
+      clearRoundObjects();
+      round++;
+      nextRound();
+    }, 2200);
+  }
+}
+
+const FIXED_IMG_MAP = {};
+
+const __imgMemo = new Map();
+
+function preloadOne(src, timeout = 8000, tries = 2){
+  if (!src) return Promise.resolve(false);
+  if (__imgMemo.has(src)) return __imgMemo.get(src);
+
+  const runner = (attempt)=> new Promise(resolve=>{
+    const img = new Image();
+    let done = false;
+    const settle = ok => { if (done) return; done = true; resolve(ok); };
+    const t = setTimeout(()=>{ img.onload = img.onerror = null; if (attempt<tries) {
+        settle(false);
+      } else settle(false);
+    }, timeout);
+    img.onload  = ()=>{ clearTimeout(t); settle(true);  };
+    img.onerror = ()=>{ clearTimeout(t); if (attempt < tries) {
+        // ลองใหม่หลังพักสั้น ๆ
+        setTimeout(()=> runner(attempt+1).then(resolve), 250 + Math.random()*500);
+      } else settle(false);
+    };
+    img.decoding = 'async';
+    img.loading  = 'eager';
+    img.referrerPolicy = 'no-referrer';
+    img.src = src;
+  });
+
+  const p = runner(0);
+  __imgMemo.set(src, p);
+  return p;
+}
+
+async function preloadInBatches(urls, batchSize = 16, onProgress = ()=>{}){
+  const list = urls.filter(Boolean);
+  let done = 0;
+  const step = async batch=>{
+    await Promise.allSettled(batch.map(u=>preloadOne(u)));
+    done += batch.length;
+    onProgress(Math.min(1, done / list.length));
+  };
+  for (let i=0; i<list.length; i+=batchSize){
+    const batch = list.slice(i, i+batchSize);
+    await step(batch);
+    await new Promise(r=>setTimeout(r, 60));
+  }
+}
+
+/* รวมลิสต์รูปทั้งหมดที่เกมต้องใช้ */
+function collectAllGameImages(){
+  const uniq = new Set();
+  Object.values(FIXED_IMG_MAP).forEach(p => uniq.add(p));
+  [
+    "image/background2.png", "image/banner2.png", "image/welcome.png",
+    "image/guide.png",
+  ].forEach(p => uniq.add(p));
+  if (typeof LEVEL1_BANK !== 'undefined' && Array.isArray(LEVEL1_BANK)) {
+  LEVEL1_BANK.forEach(q => q?.img && uniq.add(q.img));
+}
+  if (Array.isArray(NEEDS_BANK))  NEEDS_BANK.forEach(q  => q?.img && uniq.add(q.img));
+  if (Array.isArray(LEVEL3_BANK)) LEVEL3_BANK.forEach(q => q?.img && uniq.add(q.img));
+  return [...uniq].map(p => new URL(p, location.href).href);
+}
+
+function collectAllGameAudios(){
+
+  const uniq = new Set();
+
+  // เสียง UI
+  [
+    "image/audio1.mp3",
+    "image/win2.mp3",
+    "image/bgm3.mp3",
+    "image/select.mp3",
+    "image/choose1.mp3",
+    "image/choose2.mp3",
+    "image/correct.mp3",
+    "image/fail.mp3",
+    "image/question2.mp3"
+  ].forEach(p => uniq.add(p));
+
+  // ===== เสียงด่าน 1 =====
+  for(let i=1;i<=30;i++){
+    uniq.add(`audio/pongroop${i}.mp3`);
+    uniq.add(`audio/prx${i}.mp3`);
+  }
+
+  // ===== เสียงด่าน 2 =====
+  for(let i=1;i<=12;i++){
+    uniq.add(`audio2/ps${i}.mp3`);
+  }
+  for(let i=1;i<=33;i++){
+    uniq.add(`audio3/psx${i}.mp3`);
+  }
+
+  // ===== เสียงด่าน 3 =====
+  for(let i=1;i<=30;i++){
+    uniq.add(`audio4/pk${i}.mp3`);
+  }
+
+  return [...uniq].map(p => new URL(p, location.href).href);
+}
+
+/* แสดงผลความคืบหน้าใน overlay */
+function bindPreloadProgress(){
+  const bar  = document.getElementById('preloadBar');
+  const text = document.getElementById('preloadText');
+  return (ratio)=>{
+    const pct = Math.round(ratio*100);
+    if (bar)  bar.style.width = pct + '%';
+    if (text) text.textContent = `กำลังเตรียมข้อมูล… ${pct}%`;
+  };
+}
+
+async function runGlobalPreload(){
+  const urls = collectAllGameImages();
+  const onProgress = bindPreloadProgress();
+  try{
+    await preloadInBatches(urls, 18, onProgress);  // 12–24 กำลังดีบน GitHub Pages
+  } finally {
+    // ไม่ว่าบางรูปจะ fail บ้าง เราก็ไปต่อ (เพราะมี retry แล้ว)
+    document.getElementById('preloadOverlay')?.remove();
+    window.__ALL_IMAGES_READY__ = true;
+  }
+}
+
+// เริ่มพรีโหลดทันทีที่หน้าโหลดเสร็จ (อยู่นอกทุกฟังก์ชัน)
+window.addEventListener('load', ()=> { runGlobalPreload(); });
+
+
+const NEEDS_BANK = [];
+const LEVEL3_BANK = [];
+
+/* ===== WORD MATCHING POOL ===== */
+const WORD_POOL_LV1 = [
+  { id: "han1", word: "แหน", group: 1, audio: "audio/pongroop1.mp3" },{ id: "han2", word: "แหน", group: 1, audio: "audio/pongroop2.mp3" },
+  { id: "pela1", word: "เพลา", group: 2, audio: "audio/pongroop3.mp3" },{ id: "pela2", word: "เพลา", group: 2, audio: "audio/pongroop4.mp3" },
+  { id: "pugp1", word: "ปักเป้า", group: 3, audio: "audio/pongroop5.mp3" },{ id: "pugp2", word: "ปักเป้า", group: 3, audio: "audio/pongroop6.mp3" },
+  { id: "gree1", word: "กรี", group: 4, audio: "audio/pongroop7.mp3" },{ id: "gree2", word: "กรี", group: 4, audio: "audio/pongroop8.mp3" },
+  { id: "kema1", word: "เขมา", group: 5, audio: "audio/pongroop9.mp3" },{ id: "kema2", word: "เขมา", group: 5, audio: "audio/pongroop10.mp3" },
+  { id: "kam1", word: "แขม", group: 6, audio: "audio/pongroop11.mp3" },{ id: "kam2", word: "แขม", group: 6, audio: "audio/pongroop12.mp3" },
+  { id: "sra1", word: "สระ", group: 7, audio: "audio/pongroop13.mp3" },{ id: "sra2", word: "สระ", group: 7, audio: "audio/pongroop14.mp3" },
+  { id: "kru1", word: "ครุ", group: 8, audio: "audio/pongroop15.mp3" },{ id: "kru2", word: "ครุ", group: 8, audio: "audio/pongroop16.mp3" },
+ { id: "prag1", word: "ปรัก", group: 9, audio: "audio/pongroop17.mp3"}, { id: "prag2", word: "ปรัก", group: 9, audio: "audio/pongroop18.mp3"},
+ { id: "smat1", word: "สมาธิ", group: 10, audio: "audio/pongroop19.mp3"}, { id: "smat2", word: "สมาธิ", group: 10, audio: "audio/pongroop20.mp3"},
+ { id: "sema1", word: "เสมา", group: 11, audio: "audio/pongroop21.mp3"}, { id: "sema2", word: "เสมา", group: 11, audio: "audio/pongroop22.mp3"},
+ { id: "pyat1", word: "พยาธิ", group: 12, audio: "audio/pongroop23.mp3"}, { id: "pyat2", word: "พยาธิ", group: 12, audio: "audio/pongroop24.mp3"},
+ { id: "lao1", word: "เหลา", group: 13, audio: "audio/pongroop25.mp3"}, { id: "lao2", word: "เหลา", group: 13, audio: "audio/pongroop26.mp3"},
+ { id: "plee1", word: "พลี", group: 14, audio: "audio/pongroop27.mp3"}, { id: "plee2", word: "พลี", group: 14, audio: "audio/pongroop28.mp3"},
+ { id: "wana1", word: "วน", group: 15, audio: "audio/pongroop29.mp3"}, { id: "wana2", word: "วน", group: 15, audio: "audio/pongroop30.mp3"},
+];
+
+/* ===== LEVEL 1 WRONG POOL พ้องรูปผิด ===== */
+const WORD_POOL_LV1_WRONG = [
+  { word: "แน่", group: 1, audio: "audio/prx1.mp3" },{ word: "แหน่", group: 1, audio: "audio/prx2.mp3" },
+  { word: "เพรา", group: 2, audio: "audio/prx3.mp3" },{ word: "พเลา", group: 2, audio: "audio/prx4.mp3" },
+  { word: "ปักกะเป้า", group: 3, audio: "audio/prx5.mp3" },{ word: "เป้าปัก", group: 3, audio: "audio/prx6.mp3" },
+  { word: "กะรี", group: 4, audio: "audio/prx7.mp3" },{ word: "กลี", group: 4, audio: "audio/prx8.mp3" },
+  { word: "ขะเหมา", group: 5, audio: "audio/prx9.mp3" },{ word: "เขม่า", group: 5, audio: "audio/prx10.mp3" },
+  { word: "ขแม", group: 6, audio: "audio/prx11.mp3" },{ word: "แข็ม", group: 6, audio: "audio/prx12.mp3" },
+  { word: "สละ", group: 7, audio: "audio/prx13.mp3" },{ word: "สะ", group: 7, audio: "audio/prx14.mp3" },
+  { word: "คะรุ", group: 8, audio: "audio/prx15.mp3" },{ word: "คลุ", group: 8, audio: "audio/prx16.mp3" },
+  { word: "ปะหรัก", group: 9, audio: "audio/prx17.mp3" },{ word: "ปลัก", group: 9, audio: "audio/prx18.mp3" },
+  { word: "สมาทิ", group: 10, audio: "audio/prx19.mp3" },{ word: "สามารถ", group: 10, audio: "audio/prx20.mp3" },
+  { word: "สะเหมา", group: 11, audio: "audio/prx21.mp3" },{ word: "สาเม", group: 11, audio: "audio/prx22.mp3" },
+  { word: "พะยาด", group: 12, audio: "audio/prx23.mp3" },{ word: "พยาทิ", group: 12, audio: "audio/prx24.mp3" },
+  { word: "เหล่า", group: 13, audio: "audio/prx25.mp3" },{ word: "หาเล", group: 13, audio: "audio/prx26.mp3" },
+  { word: "พะลี", group: 14, audio: "audio/prx27.mp3" },{ word: "พรี", group: 14, audio: "audio/prx28.mp3" },
+  { word: "วะนะ", group: 15, audio: "audio/prx29.mp3" },{ word: "วัน", group: 15, audio: "audio/prx30.mp3" },
+];
+
+/* ===== LEVEL 2 POOL พ้องเสียง===== */
+const WORD_POOL_LV2 = [
+  { word: "อย่า", group: 1, audio: "audio2/ps1.mp3" },{ word: "หย่า", group: 1, audio: "audio1/ps2.mp3" },
+  { word: "ย่า", group: 2, audio: "audio2/ps2.mp3" },{ word: "หญ้า", group: 2, audio: "audio2/ps2.mp3" },
+  { word: "ข้า", group: 3, audio: "audio2/ps3.mp3" },{ word: "ค่า", group: 3, audio: "audio2/ps3.mp3" },{ word: "ฆ่า", group: 3, audio: "audio2/ps3.mp3" },
+  { word: "สุข", group: 4, audio: "audio2/ps4.mp3" },{ word: "สุก", group: 4, audio: "audio2/ps4.mp3" },{ word: "ศุกร์", group: 4, audio: "audio2/ps4.mp3" },
+  { word: "กำ", group: 5, audio: "audio2/ps5.mp3" },{ word: "กรรม", group: 5, audio: "audio2/ps5.mp3" },
+  { word: "บาด", group: 6, audio: "audio2/ps6.mp3" },{ word: "บาท", group: 6, audio: "audio2/ps6.mp3" },{ word: "บาตร", group: 6, audio: "audio2/ps6.mp3" },
+  { word: "ไม่", group: 7, audio: "audio2/ps7.mp3" },{ word: "ไหม้", group: 7, audio: "audio2/ps7.mp3" },
+  { word: "รด", group: 8, audio: "audio2/ps8.mp3" },{ word: "รถ", group: 8, audio: "audio2/ps8.mp3" },{ word: "รส", group: 8, audio: "audio2/ps8.mp3" },
+  { word: "เท่า", group: 9, audio: "audio2/ps9.mp3" },{ word: "เฒ่า", group: 9, audio: "audio2/ps9.mp3" },{ word: "เถ้า", group: 9, audio: "audio2/ps9.mp3" },
+  { word: "สัตว์", group: 10, audio: "audio2/ps10.mp3" },{ word: "สัจ", group: 10, audio: "audio2/ps10.mp3" },{ word: "สัตย์", group: 10, audio: "audio2/ps10.mp3" },
+  { word: "สี", group: 11, audio: "audio2/ps11.mp3" },{ word: "ศรี", group: 11, audio: "audio2/ps11.mp3" },
+  { word: "สาน", group: 12, audio: "audio2/ps12.mp3" },{ word: "สาร", group: 12, audio: "audio2/ps12.mp3" },{ word: "ศาล", group: 12, audio: "audio2/ps12.mp3" },
+  { word: "สูญ", group: 13, audio: "audio2/ps13.mp3" },{ word: "ศูนย์", group: 13, audio: "audio2/ps13.mp3" },
+  { word: "การ", group: 14, audio: "audio2/ps14.mp3" },{ word: "กาล", group: 14, audio: "audio2/ps14.mp3" },{ word: "กาน", group: 14, audio: "audio2/ps14.mp3" },{ word: "การณ์", group: 14, audio: "audio2/ps14.mp3" },{ word: "กาฬ", group: 14, audio: "audio2/ps14.mp3" },
+  { word: "พัน", group: 15, audio: "audio2/ps15.mp3" },{ word: "พันธุ์", group: 15, audio: "audio2/ps15.mp3" },{ word: "พรรณ", group: 15, audio: "audio2/ps15.mp3" },
+  { word: "พุด", group: 16, audio: "audio2/ps16.mp3" },{ word: "พุธ", group: 16, audio: "audio2/ps16.mp3" },{ word: "พุทธ", group: 16, audio: "audio2/ps16.mp3" },
+  { word: "ขั้น", group: 17, audio: "audio2/ps17.mp3" },{ word: "คั่น", group: 17, audio: "audio2/ps17.mp3" },
+  { word: "พึ่ง", group: 18, audio: "audio2/ps18.mp3" },{ word: "ผึ้ง", group: 18, audio: "audio2/ps18.mp3" },
+  { word: "กัน", group: 19, audio: "audio2/ps19.mp3" },{ word: "กรร", group: 19, audio: "audio2/ps19.mp3" },{ word: "กรรณ", group: 19, audio: "audio2/ps19.mp3" },
+  { word: "ทำ", group: 20, audio: "audio2/ps20.mp3" },{ word: "ธรรม", group: 20, audio: "audio2/ps20.mp3" },
+  { word: "คั่ว", group: 21, audio: "audio2/ps21.mp3" },{ word: "ขั้ว", group: 21, audio: "audio2/ps21.mp3" },
+  { word: "น่า", group: 22, audio: "audio2/ps22.mp3" },{ word: "หน้า", group: 22, audio: "audio2/ps22.mp3" },
+  { word: "ซ่อม", group: 23, audio: "audio2/ps23.mp3" },{ word: "ส้อม", group: 23, audio: "audio2/ps23.mp3" },
+  { word: "ขี้", group: 24, audio: "audio2/ps24.mp3" },{ word: "คี่", group: 24, audio: "audio2/ps24.mp3" },
+  { word: "กด", group: 25, audio: "audio2/ps25.mp3" },{ word: "กฎ", group: 25, audio: "audio2/ps25.mp3" },
+  { word: "ว่า", group: 26, audio: "audio2/ps26.mp3" },{ word: "หว้า", group: 26, audio: "audio2/ps26.mp3" },
+  { word: "จัน", group: 27, audio: "audio2/ps27.mp3" },{ word: "จันทร์", group: 27, audio: "audio2/ps27.mp3" },{ word: "จันทน์", group: 27, audio: "audio2/ps27.mp3" },
+  { word: "ผู้", group: 28, audio: "audio2/ps28.mp3" },{ word: "พู่", group: 28, audio: "audio2/ps28.mp3" },{ word: "ภู่", group: 28, audio: "audio2/ps28.mp3" },
+  { word: "คัน", group: 29, audio: "audio2/ps29.mp3" },{ word: "ครรภ์", group: 29, audio: "audio2/ps29.mp3" },
+    { word: "ล่า", group: 30, audio: "audio2/ps30.mp3" },{ word: "หล้า", group: 30, audio: "audio2/ps30.mp3" },
+  { word: "ซู่", group: 31, audio: "audio2/ps31.mp3" },{ word: "สู้", group: 31, audio: "audio2/ps31.mp3" },
+  { word: "หม้อ", group: 32, audio: "audio2/ps32.mp3" },{ word: "ม่อ", group: 32, audio: "audio2/ps32.mp3" },
+  { word: "ท่า", group: 33, audio: "audio2/ps33.mp3" },{ word: "ถ้า", group: 33, audio: "audio2/ps33.mp3" },
+  { word: "ฮ่า", group: 35, audio: "audio2/ps35.mp3" },{ word: "ห้า", group: 35, audio: "audio2/ps35.mp3" },
+  { word: "ยาท", group: 36, audio: "audio2/ps36.mp3" },{ word: "ญาติ", group: 36, audio: "audio2/ps36.mp3" },
+  { word: "ลัก", group: 38, audio: "audio2/ps38.mp3" },{ word: "ลักษณ์", group: 38, audio: "audio2/ps38.mp3" },
+  { word: "รัก", group: 39, audio: "audio2/ps39.mp3" },{ word: "รักษ์", group: 39, audio: "audio2/ps39.mp3" },
+  { word: "ไพ", group: 40, audio: "audio2/ps40.mp3" },{ word: "ภัย", group: 40, audio: "audio2/ps40.mp3" },
+];
+
+/* ===== LEVEL 2 WRONG POOL พ้องเสียง ผิด ===== */
+const WORD_POOL_LV2_WRONG  = [
+  { word: "ร้าง", group: 1, audio: "audio3/psx1.mp3" },{ word: "อยู่", group: 1, audio: "audio3/psx2.mp3" },
+  { word: "ปู่", group: 2, audio: "audio3/psx3.mp3" },{ word: "ดิน", group: 2, audio: "audio3/psx4.mp3" },
+  { word: "คุณ", group: 3, audio: "audio3/psx5.mp3" },{ word: "ฟัน", group: 3, audio: "audio3/psx6.mp3" },{ word: "น้อย", group: 3, audio: "audio3/psx7.mp3" },
+  { word: "ทุกข์", group: 4, audio: "audio3/psx8.mp3" },{ word: "ดิบ", group: 4, audio: "audio3/psx9.mp3" },{ word: "เสาร์", group: 4, audio: "audio3/psx10.mp3" },
+  { word: "มือ", group: 5, audio: "audio3/psx11.mp3" },{ word: "กรัม", group: 5, audio: "audio3/psx12.mp3" },{ word: "บาป", group: 5, audio: "audio3/psx13.mp3" },
+  { word: "มีด", group: 6, audio: "audio3/psx14.mp3" },{ word: "เหรียญ", group: 6, audio: "audio3/psx15.mp3" },{ word: "ตัก", group: 6, audio: "audio3/psx16.mp3" },
+  { word: "ใช่", group: 7, audio: "audio3/psx17.mp3" },{ word: "ไฟ", group: 7, audio: "audio3/psx18.mp3" },
+  { word: "น้ำ", group: 8, audio: "audio3/psx19.mp3" },{ word: "ขับ", group: 8, audio: "audio3/psx20.mp3" },{ word: "ชาติ", group: 8, audio: "audio3/psx21.mp3" },
+  { word: "เทียม", group: 9, audio: "audio3/psx22.mp3" },{ word: "แก่", group: 9, audio: "audio3/psx23.mp3" },{ word: "ถ่าน", group: 9, audio: "audio3/psx24.mp3" },
+  { word: "ป่า", group: 10, audio: "audio3/psx25.mp3" },{ word: "จะ", group: 10, audio: "audio3/psx26.mp3" },{ word: "ศักดิ์", group: 10, audio: "audio3/psx27.mp3" },
+  { word: "ฉี", group: 11, audio: "audio3/psx28.mp3" },{ word: "ซี", group: 11, audio: "audio3/psx29.mp3" },{ word: "ไม้", group: 11, audio: "audio3/psx30.mp3" },
+  { word: "สืบ", group: 12, audio: "audio3/psx31.mp3" },{ word: "ส่ง", group: 12, audio: "audio3/psx32.mp3" },{ word: "ขึ้น", group: 12, audio: "audio3/psx33.mp3" },
+  { word: "หนึ่ง", group: 13, audio: "audio3/psx34.mp3" },{ word: "หาย", group: 13, audio: "audio3/psx35.mp3" },{ word: "เสีย", group: 13, audio: "audio3/psx36.mp3" },
+  { word: "เวลา", group: 14, audio: "audio3/psx37.mp3" },{ word: "บ้าน", group: 14, audio: "audio3/psx38.mp3" },{ word: "กิน", group: 14, audio: "audio3/psx39.mp3" },
+  { word: "ร้อย", group: 15, audio: "audio3/psx40.mp3" },{ word: "พืช", group: 15, audio: "audio3/psx41.mp3" },{ word: "ผิว", group: 15, audio: "audio3/psx42.mp3" },
+  { word: "ดอก", group: 16, audio: "audio3/psx43.mp3" },{ word: "วัน", group: 16, audio: "audio3/psx44.mp3" },{ word: "พระ", group: 16, audio: "audio3/psx45.mp3" },
+  { word: "คั้น", group: 17, audio: "audio3/psx46.mp3" },{ word: "ขั่น", group: 17, audio: "audio3/psx47.mp3" },
+  { word: "พา", group: 18, audio: "audio3/psx48.mp3" },{ word: "รัง", group: 18, audio: "audio3/psx49.mp3" },
+  { word: "ยา", group: 19, audio: "audio3/psx50.mp3" },{ word: "ไกร", group: 19, audio: "audio3/psx51.mp3" },
+  { word: "งาน", group: 20, audio: "audio3/psx52.mp3" },{ word: "ชาติ", group: 20, audio: "audio3/psx53.mp3" },
+  { word: "แกง", group: 21, audio: "audio3/psx54.mp3" },{ word: "โลก", group: 21, audio: "audio3/psx55.mp3" },
+  { word: "รัก", group: 22, audio: "audio3/psx56.mp3" },{ word: "หลัง", group: 22, audio: "audio3/psx57.mp3" },
+  { word: "แซม", group: 23, audio: "audio3/psx58.mp3" },{ word: "ช้อน", group: 23, audio: "audio3/psx59.mp3" },
+  { word: "ขี่", group: 24, audio: "audio3/psx60.mp3" },{ word: "คู่", group: 24, audio: "audio3/psx61.mp3" },
+  { word: "ปุ่ม", group: 25, audio: "audio3/psx62.mp3" },{ word: "หมาย", group: 25, audio: "audio3/psx63.mp3" },
+  { word: "ว่ากล่าว", group: 26, audio: "audio3/psx64.mp3" },{ word: "ลูก", group: 26, audio: "audio3/psx65.mp3" },
+  { word: "ดอก", group: 27, audio: "audio3/psx66.mp3" },{ word: "ต้น", group: 27, audio: "audio3/psx67.mp3" },
+  { word: "หญิง", group: 28, audio: "audio3/psx68.mp3" },{ word: "แมลง", group: 28, audio: "audio3/psx69.mp3" },
+  { word: "ผื่น", group: 29, audio: "audio3/psx70.mp3" },{ word: "ตั้ง", group: 29, audio: "audio3/psx71.mp3" },
+  { word: "ช้า", group: 30, audio: "audio3/psx74.mp3" },{ word: "ทั่ว", group: 30, audio: "audio3/psx75.mp3" },
+  { word: "ซ่า", group: 31, audio: "audio3/psx76.mp3" },{ word: "รบ", group: 31, audio: "audio3/psx77.mp3" },
+  { word: "หุงข้าว", group: 32, audio: "audio3/psx78.mp3" },{ word: "ต้อ", group: 32, audio: "audio3/psx79.mp3" },
+  { word: "ทาง", group: 33, audio: "audio3/psx80.mp3" },{ word: "หาก", group: 33, audio: "audio3/psx81.mp3" },
+  { word: "ฮา", group: 35, audio: "audio3/psx84.mp3" },{ word: "หก", group: 35, audio: "audio3/psx85.mp3" },
+  { word: "ทา", group: 36, audio: "audio3/psx86.mp3" },{ word: "พี่น้อง", group: 36, audio: "audio3/psx87.mp3" },
+  { word: "รัก", group: 38, audio: "audio3/psx90.mp3" },{ word: "ภาพ", group: 38, audio: "audio3/psx91.mp3" },{ word: "ขโมย", group: 38, audio: "audio3/psx92.mp3" },
+  { word: "ความ", group: 39, audio: "audio3/psx93.mp3" },{ word: "ลัก", group: 39, audio: "audio3/psx94.mp3" },{ word: "ลักษ์", group: 39, audio: "audio3/psx94.mp3" },
+  { word: "ไพ่", group: 40, audio: "audio3/psx96.mp3" },{ word: "แล้ง", group: 40, audio: "audio3/psx97.mp3" },
+];
+
+/* ===== LEVEL 3 POOL คำพ้องความหมาย ===== */
+const WORD_POOL_LV3 = [
+{ word: "ฟ้า", group: 1, audio: "audio4/pk1.mp3" },
+{ word: "นภา", group: 1, audio: "audio4/pk2.mp3" },
+{ word: "เวหา", group: 1, audio: "audio4/pk3.mp3" },
+{ word: "ฝน", group: 2, audio: "audio4/pk4.mp3" },
+{ word: "พรรษ", group: 2, audio: "audio4/pk5.mp3" },
+{ word: "พิรุณ", group: 2, audio: "audio4/pk6.mp3" },
+{ word: "ป่า", group: 3, audio: "audio4/pk7.mp3" },
+{ word: "ไพร", group: 3, audio: "audio4/pk8.mp3" },
+{ word: "วนา", group: 3, audio: "audio4/pk9.mp3" },
+{ word: "อรัญ", group: 3, audio: "audio4/pk10.mp3" },
+{ word: "น้ำ", group: 4, audio: "audio4/pk11.mp3" },
+{ word: "วารี", group: 4, audio: "audio4/pk12.mp3" },
+{ word: "คงคา", group: 4, audio: "audio4/pk13.mp3" },
+{ word: "นที", group: 4, audio: "audio4/pk14.mp3" },
+{ word: "ดวงอาทิตย์", group: 5, audio: "audio4/pk15.mp3" },
+{ word: "ตะวัน", group: 5, audio: "audio4/pk16.mp3" },
+{ word: "สุริยะ", group: 5, audio: "audio4/pk17.mp3" },
+{ word: "ไฟ", group: 6, audio: "audio4/pk18.mp3" },
+{ word: "เพลิง", group: 6, audio: "audio4/pk19.mp3" },
+{ word: "อัคคี", group: 6, audio: "audio4/pk20.mp3" },
+{ word: "ภูเขา", group: 7, audio: "audio4/pk21.mp3" },
+{ word: "บรรพต", group: 7, audio: "audio4/pk22.mp3" },
+{ word: "สิงขร", group: 7, audio: "audio4/pk23.mp3" },
+{ word: "ลม", group: 8, audio: "audio4/pk24.mp3" },
+{ word: "วายุ", group: 8, audio: "audio4/pk25.mp3" },
+{ word: "วาตะ", group: 8, audio: "audio4/pk26.mp3" },
+{ word: "พ่อ", group: 9, audio: "audio4/pk27.mp3" },
+{ word: "บิดา", group: 9, audio: "audio4/pk28.mp3" },
+{ word: "แม่", group: 10, audio: "audio4/pk29.mp3" },
+{ word: "มารดา", group: 10, audio: "audio4/pk30.mp3" },
+{ word: "ดวงดาว", group: 11, audio: "audio4/pk31.mp3" },
+{ word: "ดารา", group: 11, audio: "audio4/pk32.mp3" },
+{ word: "พระจันทร์", group: 12, audio: "audio4/pk33.mp3" },
+{ word: "เดือน", group: 12, audio: "audio4/pk34.mp3" },
+{ word: "จันทรา", group: 12, audio: "audio4/pk35.mp3" },
+{ word: "แผ่นดิน", group: 13, audio: "audio4/pk36.mp3" },
+{ word: "ปฐพี", group: 13, audio: "audio4/pk37.mp3" },
+{ word: "พสุธา", group: 13, audio: "audio4/pk38.mp3" },
+{ word: "ดอกไม้", group: 14, audio: "audio4/pk39.mp3" },
+{ word: "บุปผา", group: 14, audio: "audio4/pk40.mp3" },
+{ word: "มาลี", group: 14, audio: "audio4/pk41.mp3" },
+{ word: "หัวใจ", group: 15, audio: "audio4/pk42.mp3" },
+{ word: "ฤดี", group: 15, audio: "audio4/pk43.mp3" },
+{ word: "หฤทัย", group: 15, audio: "audio4/pk44.mp3" },
+{ word: "ผู้หญิง", group: 16, audio: "audio4/pk45.mp3" },
+{ word: "นารี", group: 16, audio: "audio4/pk46.mp3" },
+{ word: "สตรี", group: 16, audio: "audio4/pk47.mp3" },
+{ word: "คำพูด", group: 17, audio: "audio4/pk48.mp3" },
+{ word: "วาจา", group: 17, audio: "audio4/pk49.mp3" },
+{ word: "วจี", group: 17, audio: "audio4/pk50.mp3" },
+{ word: "ปลา", group: 18, audio: "audio4/pk51.mp3" },
+{ word: "มัจฉา", group: 18, audio: "audio4/pk52.mp3" },
+{ word: "ดอกบัว", group: 19, audio: "audio4/pk53.mp3" },
+{ word: "ปทุม", group: 19, audio: "audio4/pk54.mp3" },
+{ word: "อุบล", group: 19, audio: "audio4/pk55.mp3" },
+{ word: "เมือง", group: 20, audio: "audio4/pk56.mp3" },
+{ word: "นคร", group: 20, audio: "audio4/pk57.mp3" },
+{ word: "ธานี", group: 20, audio: "audio4/pk58.mp3" },
+];
+
+/* ===== LEVEL 3 WRONG POOL ===== */
+const WORD_POOL_LV3_WRONG = [
+{ word: "ฟ้า", group: 1, audio: "audio4/pk1.mp3" },
+{ word: "นภา", group: 1, audio: "audio4/pk2.mp3" },
+{ word: "เวหา", group: 1, audio: "audio4/pk3.mp3" },
+{ word: "ฝน", group: 2, audio: "audio4/pk4.mp3" },
+{ word: "พรรษ", group: 2, audio: "audio4/pk5.mp3" },
+{ word: "พิรุณ", group: 2, audio: "audio4/pk6.mp3" },
+{ word: "ป่า", group: 3, audio: "audio4/pk7.mp3" },
+{ word: "ไพร", group: 3, audio: "audio4/pk8.mp3" },
+{ word: "วนา", group: 3, audio: "audio4/pk9.mp3" },
+{ word: "อรัญ", group: 3, audio: "audio4/pk10.mp3" },
+{ word: "น้ำ", group: 4, audio: "audio4/pk11.mp3" },
+{ word: "วารี", group: 4, audio: "audio4/pk12.mp3" },
+{ word: "คงคา", group: 4, audio: "audio4/pk13.mp3" },
+{ word: "นที", group: 4, audio: "audio4/pk14.mp3" },
+{ word: "ดวงอาทิตย์", group: 5, audio: "audio4/pk15.mp3" },
+{ word: "ตะวัน", group: 5, audio: "audio4/pk16.mp3" },
+{ word: "สุริยะ", group: 5, audio: "audio4/pk17.mp3" },
+{ word: "ไฟ", group: 6, audio: "audio4/pk18.mp3" },
+{ word: "เพลิง", group: 6, audio: "audio4/pk19.mp3" },
+{ word: "อัคคี", group: 6, audio: "audio4/pk20.mp3" },
+{ word: "ภูเขา", group: 7, audio: "audio4/pk21.mp3" },
+{ word: "บรรพต", group: 7, audio: "audio4/pk22.mp3" },
+{ word: "สิงขร", group: 7, audio: "audio4/pk23.mp3" },
+{ word: "ลม", group: 8, audio: "audio4/pk24.mp3" },
+{ word: "วายุ", group: 8, audio: "audio4/pk25.mp3" },
+{ word: "วาตะ", group: 8, audio: "audio4/pk26.mp3" },
+{ word: "พ่อ", group: 9, audio: "audio4/pk27.mp3" },
+{ word: "บิดา", group: 9, audio: "audio4/pk28.mp3" },
+{ word: "แม่", group: 10, audio: "audio4/pk29.mp3" },
+{ word: "มารดา", group: 10, audio: "audio4/pk30.mp3" },
+{ word: "ดวงดาว", group: 11, audio: "audio4/pk31.mp3" },
+{ word: "ดารา", group: 11, audio: "audio4/pk32.mp3" },
+{ word: "พระจันทร์", group: 12, audio: "audio4/pk33.mp3" },
+{ word: "เดือน", group: 12, audio: "audio4/pk34.mp3" },
+{ word: "จันทรา", group: 12, audio: "audio4/pk35.mp3" },
+{ word: "แผ่นดิน", group: 13, audio: "audio4/pk36.mp3" },
+{ word: "ปฐพี", group: 13, audio: "audio4/pk37.mp3" },
+{ word: "พสุธา", group: 13, audio: "audio4/pk38.mp3" },
+{ word: "ดอกไม้", group: 14, audio: "audio4/pk39.mp3" },
+{ word: "บุปผา", group: 14, audio: "audio4/pk40.mp3" },
+{ word: "มาลี", group: 14, audio: "audio4/pk41.mp3" },
+{ word: "หัวใจ", group: 15, audio: "audio4/pk42.mp3" },
+{ word: "ฤดี", group: 15, audio: "audio4/pk43.mp3" },
+{ word: "หฤทัย", group: 15, audio: "audio4/pk44.mp3" },
+{ word: "ผู้หญิง", group: 16, audio: "audio4/pk45.mp3" },
+{ word: "นารี", group: 16, audio: "audio4/pk46.mp3" },
+{ word: "สตรี", group: 16, audio: "audio4/pk47.mp3" },
+{ word: "คำพูด", group: 17, audio: "audio4/pk48.mp3" },
+{ word: "วาจา", group: 17, audio: "audio4/pk49.mp3" },
+{ word: "วจี", group: 17, audio: "audio4/pk50.mp3" },
+{ word: "ปลา", group: 18, audio: "audio4/pk51.mp3" },
+{ word: "มัจฉา", group: 18, audio: "audio4/pk52.mp3" },
+{ word: "ดอกบัว", group: 19, audio: "audio4/pk53.mp3" },
+{ word: "ปทุม", group: 19, audio: "audio4/pk54.mp3" },
+{ word: "อุบล", group: 19, audio: "audio4/pk55.mp3" },
+{ word: "เมือง", group: 20, audio: "audio4/pk56.mp3" },
+{ word: "นคร", group: 20, audio: "audio4/pk57.mp3" },
+{ word: "ธานี", group: 20, audio: "audio4/pk58.mp3" },
+];
+
+(function attachLevel3Images(){
+  for (const q of LEVEL3_BANK){
+    const img = FIXED_IMG_MAP[q.prompt];
+    if (img) q.img = img;
+  }
+})();
+
+
+function drawQuestion(){
+
+  let activePool;
+  let wrongPool;
+
+  if (window.currentLevel === 1){
+    activePool = WORD_POOL_LV1;
+    wrongPool  = WORD_POOL_LV1_WRONG;
+  }
+  else if (window.currentLevel === 2){
+    activePool = WORD_POOL_LV2;
+    wrongPool  = WORD_POOL_LV2_WRONG; 
+  }
+  else {
+    activePool = WORD_POOL_LV3;
+    wrongPool  = WORD_POOL_LV3_WRONG;
+  }
+
+// ===== 1) เลือกกลุ่มหลัก (ไม่ซ้ำจนหมด pool) =====
+const groups = [...new Set(activePool.map(w=>w.group))];
+const correctGroup = pickGroupNoRepeat(groups, window.currentLevel);
+
+  // ===== 2) เลือกคำถูก 2 คำ จาก activePool =====
+let correctWords = [];
+
+const groupWords = activePool.filter(w => w.group === correctGroup);
+
+// 🔒 ถ้าเป็นด่าน 3 → บังคับให้มีคำแรกของกลุ่ม
+if (window.currentLevel === 3){
+
+  const firstWord = groupWords[0];   // คำแรกของกลุ่ม
+
+  const others = shuffle(groupWords.slice(1));
+
+  correctWords = [ firstWord, others[0] ];
+
+}else{
+
+  // ด่านอื่นสุ่มปกติ
+  correctWords = shuffle(groupWords).slice(0,2);
+
+}
+
+  // ===== 3) เลือกคำหลอกจาก wrongPool กลุ่มเดียวกัน =====
+let wrongWords = [];
+
+if (wrongPool.length > 0){
+
+  if (window.currentLevel === 3){
+
+    // 🔥 ด่าน 3 → เอาคำหลอกจากกลุ่มอื่นทั้งหมด
+    wrongWords = shuffle(
+      wrongPool.filter(w => w.group !== correctGroup)
+    ).slice(0,2);
+
+  } else {
+
+    // ด่านอื่นเหมือนเดิม
+    wrongWords = shuffle(
+      wrongPool.filter(w => w.group === correctGroup)
+    ).slice(0,2);
+
+  }
+}
+
+  // ===== 4) รวมทั้งหมด =====
+// ===== 4) ติดป้ายว่าคำไหนมาจาก wrongPool =====
+const taggedCorrect = correctWords.map(w => ({
+  ...w,
+  isWrong: false
+}));
+
+const taggedWrong = wrongWords.map(w => ({
+  ...w,
+  isWrong: true
+}));
+
+let allChoices = [
+  ...taggedCorrect,
+  ...taggedWrong
+];
+
+for (let i = allChoices.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [allChoices[i], allChoices[j]] = [allChoices[j], allChoices[i]];
+}
+
+  return {
+    choices: allChoices
+  };
+}
+
+function nextRound(){
+  if (ended) return;
+
+  clearRoundObjects();
+  awaitingAnswer = false;
+  stopTimebar();
+  qBox.textContent = '';
+
+setTimeout(()=>{
+
+  const q = drawQuestion();
+  spawnFourCircles(q.choices);
+
+  // 🔊 เล่นเสียงเริ่มคำถาม
+  try{
+    const s = questionSound?.cloneNode(true);
+    if(s){
+      s.volume = 0.9;
+      s.play?.();
+    }
+  }catch(_){}
+
+  awaitingAnswer = true;
+
+}, OPT_IN_MS);
+}
+
+function startRoundTimer(){
+  awaitingAnswer = true;
+}
+
+async function startGame(){
+  // รอให้พรีโหลดประกาศพร้อม
+  while (!window.__ALL_IMAGES_READY__) {
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  document.body.classList.remove('prestart');
+  document.body.classList.add('in-game');
+  running=true; ended=false; paused=false;
+  window.ended = ended;
+  overlay.style.visibility='hidden'; overlay.style.opacity='0';
+  score=0; round=0; updateHUD();
+    resetGroupMemory();
+  startGameTimer();    
+  nextRound();         
+}
+
+
+  // ======== จบด่าน (แก้ใหม่: หยุดสนามเกมทั้งหมดเมื่อสรุปคะแนน) ========
+  function endLevel(){
+        clearCountdown();
+    ended = true;
+        window.ended = ended; 
+    running = false;
+    clearGameTimer();
+    stopClockUI();
+
+    // 🔒 หยุดและซ่อนสนามเกมทั้งหมด
+    awaitingAnswer = false;
+    stopTimebar();
+    clearRoundObjects();         
+        clearDecorImages();
+    qBox.textContent = '';            
+    qBox.style.display = 'none';        
+    if (qImg){
+      qImg.style.display = 'none';       
+      qImg.removeAttribute('src');
+    }
+    game.style.visibility = 'hidden';    
+
+    // อัปเดตคะแนน
+    finalScoreEl.textContent = String(score);
+const list = document.getElementById("correctList");
+list.innerHTML = "";
+
+correctPairs.forEach(p=>{
+  const div = document.createElement("div");
+  div.className="correct-pair";
+  div.textContent=p;
+  list.appendChild(div);
+});
+
+    // ★ ใส่อีโมจิตามช่วงคะแนน
+    const badgeEl = document.getElementById('scoreBadge');
+    badgeEl.textContent = getBadgeEmoji(score);
+
+    bgm?.pause?.();
+    winSound?.play?.().catch(()=>{});
+
+    overlay.style.visibility = 'visible';
+    overlay.style.opacity    = '1';
+  }
+
+
+  function getBadgeEmoji(sc){
+    if (sc <= 5)  return '❤️';    // 0–5
+    if (sc <= 10) return '🥇';    // 6–10
+    if (sc <= 15) return '🏆';    // 11–15
+    return '🏆';
+  }
+
+
+function pauseGame(){
+  if(!running||paused) return;
+  paused = true;
+  clearInterval(roundTimer);
+  document.querySelectorAll('.option').forEach(n=> n.style.pointerEvents='none');
+  pauseGameTimer();
+    bgm?.pause?.();  
+}
+
+  function resumeGame(){ if(!paused||ended)return; paused=false; 
+        document.querySelectorAll('.option').forEach(n=> n.style.pointerEvents='auto'); 
+    bgm?.play?.().catch(()=>{}); 
+
+        resumeGameTimer(); // [เพิ่มใหม่] กลับมานับเวลารวมต่อหลังจากพักเกม
+}
+  document.getElementById('pauseBtn')?.addEventListener('click', ()=>{ if(!paused){ pauseGame(); document.getElementById('pauseBtn').textContent='▶️ ต่อ'; } else { resumeGame(); document.getElementById('pauseBtn').textContent='⏸ หยุด'; } });
+  
+
+document.getElementById('quickRestart')?.addEventListener('click', ()=>{
+      clearCountdown();
+    document.body.classList.remove('prestart');
+    restorePlayfield();  
+    overlay.style.visibility='hidden';
+    overlay.style.opacity='0';
+        clearDecorImages();
+    resetState();
+    document.body.classList.remove('in-game');
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('landing').classList.remove('hide');
+         bgm.currentTime = 0;
+       bgm.play().catch(()=>{});
+
+});
+
+  restartBtn.addEventListener('click', ()=>{
+        randomizeBackgroundIfCameraOff(); 
+    restorePlayfield(); 
+    overlay.style.visibility='hidden';
+    overlay.style.opacity='0';
+    resetState();
+        bgm.currentTime = 0;
+    bgm.play().catch(()=>{});
+    startGame();
+  });
+
+
+  selectLevelBtn.addEventListener('click', ()=>{
+        randomizeBackgroundIfCameraOff();
+    clearCountdown();
+    document.body.classList.remove('prestart');
+    restorePlayfield(); 
+    overlay.style.visibility='hidden';
+    overlay.style.opacity='0';
+        clearDecorImages(); 
+    resetState();
+    document.getElementById('landing').classList.remove('hide');
+    document.getElementById('startScreen').style.display='none';
+        bgm.currentTime = 0;
+      bgm.play().catch(()=>{});
+  });
+
+
+  // start screen
+  const startScreen  = document.getElementById('startScreen');
+  const startBtn     = document.getElementById('startBtn');
+  const countdownEl  = document.getElementById('countdown');
+
+let countdownItv = null;
+function clearCountdown(){
+  if (countdownItv){
+    clearInterval(countdownItv);
+    countdownItv = null;
+  }
+  countdownEl.style.display = 'none';
+  countdownEl.textContent = '3';
+  startBtn.style.display = 'inline-block';
+  startBtn.disabled = false;
+  startBtn.style.pointerEvents = 'auto';
+}
+
+  function openStart(autoCountdown=true){
+  clearCountdown();
+    document.body.classList.add('prestart');  
+    startScreen.style.display='flex';
+  
+if (autoCountdown) {
+  let n = 3;
+  countdownEl.textContent = n;
+  countdownEl.style.display = 'block';
+
+  countdownItv = setInterval(() => {
+    n--;
+    if (n > 0) {
+      countdownEl.textContent = n;
+    } else {
+      clearInterval(countdownItv);
+      countdownItv = null;
+      startScreen.style.display = 'none';
+      startGame();
+    }
+  }, 1000);
+}
+
+    else {
+      startBtn.disabled=false; startBtn.style.pointerEvents='auto';
+      startBtn.style.display='inline-block'; countdownEl.style.display='none';
+    }
+  }
+  startBtn?.addEventListener('click', ()=>{
+      clearCountdown(); 
+    if(startBtn.disabled) return;
+    startBtn.disabled=true; startBtn.style.pointerEvents='none';
+    startBtn.style.display='none';
+    
+let n = 3;
+countdownEl.textContent = n;
+countdownEl.style.display = 'block';
+countdownItv = setInterval(() => {
+  n--;
+  if (n > 0) {
+    countdownEl.textContent = n;
+  } else {
+    clearInterval(countdownItv);
+    countdownItv = null;
+    startScreen.style.display = 'none';
+    startGame();
+    startBtn.disabled = false;
+    startBtn.style.pointerEvents = 'auto';
+  }
+}, 1000);
+
+  });
+
+
+  document.getElementById('guideBtn')?.addEventListener('click', ()=>{ document.getElementById('landing').classList.add('hide'); document.getElementById('guideScreen').style.display='flex' });
+  document.getElementById('guideBack')?.addEventListener('click', ()=>{ document.getElementById('guideScreen').style.display='none'; document.getElementById('landing').classList.remove('hide') });
+
+  // visibility pause
+  let wasRunning=false;
+  function uiBlockingOpen(){
+    const landing=document.getElementById('landing');
+    const startOpen = startScreen && startScreen.style.display!=='none';
+    const guide=document.getElementById('guideScreen');
+    const guideOpen = getComputedStyle(guide).display!=='none';
+    const overlayOpen = overlay.style.visibility==='visible';
+    return overlayOpen || (!landing.classList.contains('hide')) || startOpen || guideOpen;
+  }
+  function handleHidden(){ wasRunning = running && !ended && !uiBlockingOpen(); if(wasRunning) pauseGame() }
+  function handleVisible(){ if(wasRunning && paused && !ended && !uiBlockingOpen()) resumeGame(); wasRunning=false }
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) handleHidden(); else handleVisible() });
+  window.addEventListener('blur', handleHidden); window.addEventListener('focus', handleVisible);
+
+})();
+</script>
+
+<!-- ===== Pose (มือเป็นวงกลมแตะเลือกช้อยส์) ===== -->
+<script type="module">
+import {PoseLandmarker, FilesetResolver} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+const camBtn = document.getElementById('camBtn');
+const video  = document.getElementById('cameraMirror');
+const cvs    = document.getElementById('camCanvas');
+const ctx    = cvs.getContext('2d', { alpha: true });
+const DETECT_W = 320;
+let detectCanvas = document.createElement('canvas');
+let detectCtx = detectCanvas.getContext('2d', { alpha:false, desynchronized:true });
+let CAM_ON=false, landmarker=null, raf=0, stream=null;
+
+function fitCanvas(){ const dpr = CAM_ON? 1 : Math.max(1, window.devicePixelRatio||1); cvs.width=Math.round(innerWidth*dpr); cvs.height=Math.round(innerHeight*dpr); cvs.style.width=innerWidth+'px'; cvs.style.height=innerHeight+'px'; ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr,dpr) }
+fitCanvas(); addEventListener('resize', fitCanvas);
+function coverCropRect(){ const vw=video.videoWidth||640, vh=video.videoHeight||480; const sw=innerWidth, sh=innerHeight; const scale=Math.max(sw/vw, sh/vh); const sW=Math.round(sw/scale), sH=Math.round(sh/scale); const sX=Math.round((vw-sW)/2), sY=Math.round((vh-sH)/2); return {sX,sY,sW,sH,vw,vh,sw,sh} }
+function mapToScreen(nx,ny){ const {sX,sY,sW,sH,vw,vh,sw,sh} = coverCropRect(); const px=nx*vw, py=ny*vh; const u=(px-sX)/sW, v=(py-sY)/sH; let x=u*sw, y=v*sh; x=sw-x; return {x,y} }
+
+ 	const SHOW_HAND_BALL=false; 
+ 	const lastHitAt=new WeakMap(); 
+ 	const HIT_LOCK_MS=160;
+function circleIntersectsRect(cx,cy,r, rc){ 
+ 	const nx=Math.max(rc.left, 
+ 	Math.min(cx, rc.right)); 
+ 	const ny=Math.max(rc.top, 
+ 	Math.min(cy, rc.bottom)); 
+ 	const dx=cx-nx, dy=cy-ny;    	
+ 	return (dx*dx+dy*dy)<=r*r 
+}
+
+function hitByCircle(center, r){
+
+  if (window.ended) return;
+
+  const opts = [...document.querySelectorAll('.option')];
+
+  for (const n of opts){
+
+    // ถ้าปุ่มถูก lock แล้ว ข้าม
+    if(n.classList.contains("locked")) continue;
+
+    const rc = n.getBoundingClientRect();
+
+    if (circleIntersectsRect(center.x, center.y, r, rc)){
+
+      const t = performance.now();
+      const last = lastHitAt.get(n) || 0;
+
+      if (t - last < HIT_LOCK_MS) continue;
+
+      lastHitAt.set(n, t);
+
+      n.click();
+
+      break; // 🔥 สำคัญ: ให้คลิกได้แค่ 1 ปุ่มต่อเฟรม
+    }
+  }
+}
+
+async function ensureLandmarker(){ if(landmarker) return landmarker; const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"); landmarker = await PoseLandmarker.createFromOptions(fileset, { baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" }, runningMode:'VIDEO', numPoses:1, minPoseDetectionConfidence:.35, minPosePresenceConfidence:.35, minTrackingConfidence:.35 }); return landmarker }
+function drawHandBall(elbowIdx, wristIdx, lm){ if(!lm[elbowIdx]||!lm[wristIdx]) return null; const elbow = mapToScreen(lm[elbowIdx].x, lm[elbowIdx].y); const wrist = mapToScreen(lm[wristIdx].x, lm[wristIdx].y); const r=24; const L=Math.max(1, Math.hypot(wrist.x-elbow.x, wrist.y-elbow.y)); const ux=(wrist.x-elbow.x)/L, uy=(wrist.y-elbow.y)/L; const HAND_PUSH=1.5, PUSH_PX=6; const center={ x: wrist.x + ux*(r*HAND_PUSH+PUSH_PX), y: wrist.y + uy*(r*HAND_PUSH+PUSH_PX) }; if(SHOW_HAND_BALL){ ctx.beginPath(); ctx.arc(center.x,center.y,r,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); } hitByCircle(center, r*.95); return center }
+function drawPoseAndColliders(res){ const sw=innerWidth, sh=innerHeight; ctx.clearRect(0,0,sw,sh); if(!res?.landmarks?.length) return; const lm=res.landmarks[0]; drawHandBall(13,15,lm); drawHandBall(14,16,lm) }
+function runLoop(){ const step=()=>{ if(!video.videoWidth){ raf=requestAnimationFrame(step); return } const now=performance.now(); try{ const {sX,sY,sW,sH}=coverCropRect(); detectCtx.drawImage(video, sX,sY,sW,sH, 0,0, detectCanvas.width, detectCanvas.height); const res=landmarker.detectForVideo(detectCanvas, now); drawPoseAndColliders(res) }catch(e){} raf=requestAnimationFrame(step) }; raf=requestAnimationFrame(step) }
+async function startCamera(){ await ensureLandmarker(); 
+    stream = await navigator.mediaDevices.getUserMedia({
+  video: { width: 960, height: 540, frameRate: 30, facingMode: 'user' },
+  audio: false
+});                       
+                          
+    video.srcObject=stream; await video.play().catch(()=>{}); const vw=video.videoWidth||640, vh=video.videoHeight||480; const ratio=vw/vh; detectCanvas.width=DETECT_W; detectCanvas.height=Math.round(DETECT_W/ratio); video.style.display='block'; cvs.style.display='block'; camBtn.textContent='📷 กล้อง: เปิด'; CAM_ON=true; fitCanvas(); runLoop() }
+function stopCamera(){ cancelAnimationFrame(raf); if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null } try{ video.pause() }catch(e){} video.removeAttribute('srcObject'); video.style.display='none'; cvs.style.display='none'; ctx.clearRect(0,0,innerWidth,innerHeight); camBtn.textContent='📷 กล้อง: ปิด'; CAM_ON=false; fitCanvas() }
+camBtn.addEventListener('click', async ()=>{ if(!stream){ try{ await startCamera() }catch(err){ camBtn.textContent='📷 กล้อง: ไม่ได้รับอนุญาต'; camBtn.disabled=true } } else { stopCamera() } });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream) stopCamera() });
+</script>
+
+<!-- ===== เมนู/เริ่มเกม ===== -->
+<script>
+(()=> {
+  const landing = document.getElementById('landing');
+  const startScreen = document.getElementById('startScreen');
+  const guideScreen = document.getElementById('guideScreen');
+
+/* ===== Random Background System (ใช้เฉพาะตอนปิดกล้อง) ===== */
+function randomizeBackgroundIfCameraOff(){
+  const video = document.getElementById('cameraMirror');
+
+  // ถ้ากล้องกำลังเปิด → ไม่ต้องสุ่ม
+  if(video && video.srcObject){
+    return;
+  }
+
+  const BG_LIST = [
+    "image/bg1.png",
+    "image/bg2.png",
+    "image/bg3.png",
+    "image/bg4.png",
+  ];
+
+  const pick = BG_LIST[Math.floor(Math.random() * BG_LIST.length)];
+
+  document.body.style.background =
+    `url("${pick}") center center / cover no-repeat fixed`;
+}
+
+  document.querySelectorAll('.levelBtn').forEach(btn=>{
+  if(btn.id==='guideBtn') return;
+  btn.addEventListener('click', ()=>{
+    const lv = Number(btn.dataset.level || 0);
+        randomizeBackgroundIfCameraOff();
+    window.currentLevel = lv; // กันพลาดข้ามสโคป
+     document.body.classList.add('prestart'); 
+    landing.classList.add('hide');
+    startScreen.style.display='flex';
+
+        const startBtn    = document.getElementById('startBtn');
+        const countdownEl = document.getElementById('countdown');
+
+if (startBtn){
+  startBtn.style.display = 'inline-block';
+  startBtn.disabled = false;
+  startBtn.style.pointerEvents = 'auto';
+}
+if (countdownEl){
+  countdownEl.style.display = 'none';
+  countdownEl.textContent = '3';
+}
+
+   document.getElementById('countdown').style.display='none'; 
+   const st = document.getElementById('startTitle');
+
+function getMissionTitle(lv){
+
+  if(lv === 1){
+    return "ภารกิจ : จับคู่คำพ้องรูปให้ถูกต้อง";
+  }
+
+  if(lv === 2){
+    return "ภารกิจ : จับคู่คำพ้องเสียงให้ถูกต้อง";
+  }
+
+  if(lv === 3){
+    return "ภารกิจ : จับคู่คำพ้องความหมายให้ถูกต้อง";
+  }
+
+  return "ภารกิจ : จับคู่คำพ้องให้ถูกต้อง";
+}
+    st.textContent = getMissionTitle(lv);
+
+  });
+});
+
+  document.getElementById('guideBtn')?.addEventListener('click', ()=>{ landing.classList.add('hide'); guideScreen.style.display='flex' });
+  document.getElementById('guideBack')?.addEventListener('click', ()=>{ guideScreen.style.display='none'; landing.classList.remove('hide') });
+})();
+</script>
+
+<!-- ===== Preload Overlay ===== -->
+<div id="preloadOverlay" style="
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:#000c; color:#fff; z-index:99999; flex-direction:column; gap:12px; font-weight:900;">
+  <div id="preloadText" style="font-size:20px">กำลังเตรียมข้อมูล… 0%</div>
+  <div style="width:min(80vw,480px); height:10px; background:#ffffff22; border-radius:999px; overflow:hidden">
+    <div id="preloadBar" style="height:100%; width:0%; background:#10b981"></div>
+  </div>
+  <div style="font-size:12px;opacity:.8">...รอสักครู่...</div>
+</div>
+</body>
+</html>
