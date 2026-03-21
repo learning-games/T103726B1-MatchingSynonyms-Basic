@@ -1196,6 +1196,7 @@ function resetState(){
   ended   = true;
   window.ended = ended;
   paused  = false;
+  selected = [];
   clearRoundObjects();
     clearDecorImages();
   clearGameTimer();
@@ -2076,6 +2077,7 @@ function nextRound(){
   if (ended) return;
 
   clearRoundObjects();
+  selected = [];
   awaitingAnswer = false;
   stopTimebar();
   qBox.textContent = '';
@@ -2127,6 +2129,7 @@ async function startGame(){
     ended = true;
         window.ended = ended; 
     running = false;
+    selected = [];
     clearGameTimer();
     stopClockUI();
 
